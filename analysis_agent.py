@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Any, Dict
 import traceback
+import random
 
 from langchain_core.messages import SystemMessage, HumanMessage
 
@@ -70,16 +71,17 @@ class AnalysisAgent:
     def _force_safe_complete_strategy(self, strategy_dict, avoid_complete_signatures, target_ratio, dataset):
         """Generate a strategy that avoids ALL failed complete signatures"""
         
-        # Safe starting points based on dataset
         if dataset.lower() == 'imagenet':
             safe_combinations = [
-                ('taylor', 2, 0.3, 0.2), ('taylor', 4, 0.25, 0.15),
-                ('l1norm', 2, 0.35, 0.25), ('l2norm', 4, 0.3, 0.2)
+                ('taylor', 1, 0.25, 0.15), ('taylor', 2, 0.3, 0.2), ('taylor', 4, 0.25, 0.15), ('taylor', 8, 0.2, 0.1), ('taylor', 16, 0.15, 0.1),
+                ('l1norm', 1, 0.3, 0.2), ('l1norm', 2, 0.35, 0.25), ('l1norm', 4, 0.3, 0.2), ('l1norm', 8, 0.25, 0.15), ('l1norm', 16, 0.2, 0.1),
+                ('l2norm', 1, 0.25, 0.2), ('l2norm', 2, 0.3, 0.2), ('l2norm', 4, 0.3, 0.2), ('l2norm', 8, 0.25, 0.15), ('l2norm', 16, 0.2, 0.1)
             ]
         else:
             safe_combinations = [
-                ('l1norm', 2, 0.5, 0.3), ('taylor', 4, 0.4, 0.25),
-                ('l2norm', 2, 0.45, 0.3), ('taylor', 1, 0.4, 0.2)
+                ('taylor', 1, 0.4, 0.2), ('taylor', 2, 0.45, 0.25), ('taylor', 4, 0.4, 0.25), ('taylor', 8, 0.35, 0.2), ('taylor', 16, 0.3, 0.15),
+                ('l1norm', 1, 0.5, 0.3), ('l1norm', 2, 0.5, 0.3), ('l1norm', 4, 0.45, 0.25), ('l1norm', 8, 0.4, 0.2), ('l1norm', 16, 0.35, 0.2),
+                ('l2norm', 1, 0.45, 0.25), ('l2norm', 2, 0.45, 0.3), ('l2norm', 4, 0.4, 0.25), ('l2norm', 8, 0.35, 0.2), ('l2norm', 16, 0.3, 0.15)
             ]
         
         for importance, round_to, mlp_mult, qkv_mult in safe_combinations:
@@ -153,19 +155,19 @@ class AnalysisAgent:
         cnn_types = ['resnet', 'efficientnet', 'mobilenet', 'densenet', 'convnext', 'resnext']  # include resnext for consistency
         is_cnn = any(cnn_type in model_name.lower() for cnn_type in cnn_types)
         
-        print(f"[🧠] Enhanced Analysis for {dataset} {'CNN' if is_cnn else 'ViT'}")
-        if target_macs is not None:
-            print(f"[⚙️] MACs-first context: target={target_macs/1e9:.3f}G, "
-                f"baseline={'?.???' if baseline_macs is None else f'{baseline_macs/1e9:.3f}G'}, "
-                f"tol=+{macs_overshoot_tolerance_pct:.1f}%/-{macs_undershoot_tolerance_pct:.1f}%")
+        # print(f"[🧠] Enhanced Analysis for {dataset} {'CNN' if is_cnn else 'ViT'}")
+        # if target_macs is not None:
+        #     print(f"[⚙️] MACs-first context: target={target_macs/1e9:.3f}G, "
+        #         f"baseline={'?.???' if baseline_macs is None else f'{baseline_macs/1e9:.3f}G'}, "
+        #         f"tol=+{macs_overshoot_tolerance_pct:.1f}%/-{macs_undershoot_tolerance_pct:.1f}%")
 
         
         if is_cnn:
-            print(f"[🔄] Using CNN LLM-based historical learning")
+            # print(f"[🔄] Using CNN LLM-based historical learning")
             llm_response = await self._execute_cnn_analysis_with_history(state, model_name)
         else:
-            print(f"[🔄] Using ViT LLM-based analysis")
-            print(f"[🔄] Using ViT LLM-based historical learning")  # CHANGED!
+            # print(f"[🔄] Using ViT LLM-based analysis")
+            # print(f"[🔄] Using ViT LLM-based historical learning")  # CHANGED!
             llm_response = await self._execute_vit_analysis_with_history(state, model_name)  # NEW!
         
         if is_cnn and 'channel_pruning_ratio' in llm_response:
@@ -198,7 +200,7 @@ class AnalysisAgent:
         if target_macs_out is not None:
             # also provide raw ops for modules that expect absolute MACs
             extra_state['target_macs'] = float(target_macs_out)
-            extra_state['target_macs'] = int(target_macs_out)
+            # extra_state['target_macs'] = int(target_macs_out)
             extra_state['macs_overshoot_tolerance_pct'] = float(macs_overshoot_tol_out)
             extra_state['macs_undershoot_tolerance_pct'] = float(macs_undershoot_tol_out)
         if baseline_macs_out is not None:
@@ -233,7 +235,7 @@ class AnalysisAgent:
         if not history:
             return ""
         
-        print(f"[🔍] Analyzing {len(history)} history entries for bidirectional guidance")
+        # print(f"[🔍] Analyzing {len(history)} history entries for bidirectional guidance")
 
         # Analyze MAC failure patterns
         mac_overshoot_count = 0
@@ -367,7 +369,7 @@ class AnalysisAgent:
             cnn_learning_analyzer = CNNLearningAnalyzer()
 
             # 2. USE COMPREHENSIVE ANALYSIS FIRST
-            print(f"[📊] Running comprehensive CNN channel pattern analysis...")
+            # print(f"[📊] Running comprehensive CNN channel pattern analysis...")
             comprehensive_analysis = cnn_learning_analyzer.analyze_cnn_channel_patterns(
                 history, target_ratio, dataset,
                 baseline_macs=baseline_macs,
@@ -517,6 +519,13 @@ class AnalysisAgent:
                 return None
             return v / 1e9 if v > 1e6 else v
 
+        round_to_instruction = """Use round_to=2 as the standard choice because:
+        1. PRECISION: Finer granularity allows more precise MAC targeting
+        2. ACCURACY PRESERVATION: Smaller pruning increments reduce risk of removing critical channel combinations
+        3. FINE-GRAINED CONTROL: Enables hitting exact MAC budgets more accurately
+        4. ITERATIVE REFINEMENT: Easier to fine-tune results with smaller steps"""
+
+
         # Pull optional MACs-first context
         baseline_macs = None
         target_macs = None
@@ -560,6 +569,7 @@ class AnalysisAgent:
             =====================
             - Baseline MACs: {baseline_str}
             - Target  MACs:  {target_macs:.3f}G
+            CRITICAL ROUND_TO INSTRUCTION: {round_to_instruction}
             - Overshoot tolerance (strict): +{macs_overshoot_tolerance_pct:.1f}%
             - Undershoot tolerance (lenient): -{macs_undershoot_tolerance_pct:.1f}%
             - Acceptable range: {target_macs * (1 - macs_undershoot_tolerance_pct / 100):.3f}G - {target_macs * (1 + macs_overshoot_tolerance_pct / 100):.3f}G
@@ -578,7 +588,7 @@ class AnalysisAgent:
                 HumanMessage(content=enhanced_prompt),
             ])
 
-            print(f"[DEBUG] Enhanced CNN learning LLM response length: {len(response.content)}")
+            # print(f"[DEBUG] Enhanced CNN learning LLM response length: {len(response.content)}")
 
             strategy_dict = parse_llm_json_response(response.content)
 
@@ -773,7 +783,7 @@ class AnalysisAgent:
 
         ANALYSIS:
         - If previous overshoot: Reduce channel ratio
-        - If previous undersoot: Increase channel ratio  
+        - If previous undershoot: Increase channel ratio  
         - Consider changing importance criterion or round_to if needed
         - Make smart adjustments based on {model_name} characteristics
 
@@ -823,9 +833,9 @@ class AnalysisAgent:
             new_channel = original_channel * 0.9
             direction = "reduced (overshoot)"
         else:
-            # undersoot, increase by 10%
+            # undershoot, increase by 10%
             new_channel = original_channel * 1.1
-            direction = "increased (undersoot)"
+            direction = "increased (undershoot)"
         
         new_channel = max(0.1, min(0.7, new_channel))
         
@@ -842,8 +852,32 @@ class AnalysisAgent:
         """
         Use LLM to determine baseline CNN strategy for first attempt
         """
+
+        round_to_instruction = """Use round_to=2 as the standard choice because:
+        1. PRECISION: Finer granularity allows more precise MAC targeting
+        2. ACCURACY PRESERVATION: Smaller pruning increments reduce risk of removing critical channel combinations  
+        3. FINE-GRAINED CONTROL: Enables hitting exact MAC budgets more accurately
+        4. ITERATIVE REFINEMENT: Easier to fine-tune results with smaller steps"""
+
         
         prompt = f"""You are an expert in CNN pruning for {model_name} on {dataset}.
+
+        RESEARCH-BASED IMPORTANCE CRITERION PRIORITY:
+        Your system uses isomorphic pruning (global_pruning=true) which groups isomorphic structures.
+        Combined with Taylor criterion, this achieves SOTA performance:
+        - For CNNs: Isomorphic + Taylor shows >93% correlation with oracle ranking
+        - For ViTs: Isomorphic + Taylor dramatically outperforms magnitude-based methods
+        - Taylor uses gradient information vs. L1/L2 which rely on potentially biased weight distributions
+
+        CRITICAL IMPORTANCE SELECTION:
+        Use "taylor" as your first choice unless you have specific evidence from history that Taylor consistently failed.
+        Taylor importance uses gradient information and generally provides superior accuracy preservation.
+        Only deviate from Taylor if you can justify why based on the specific model and dataset combination.
+
+        RECOMMENDED: Start with "taylor" as importance_criterion based on research evidence. Consider l1norm or l2norm only if historical analysis shows consistent Taylor underperformance for this specific model/dataset combination.
+
+
+        CRITICAL ROUND_TO INSTRUCTION: {round_to_instruction}
 
         TASK: Determine the baseline CNN channel pruning strategy to achieve {target_ratio*100:.0f}% parameter reduction.
 
@@ -868,7 +902,7 @@ class AnalysisAgent:
         {{
             "importance_criterion": "taylor|l1norm|l2norm",
             "channel_pruning_ratio": YOUR_CONSERVATIVE_ESTIMATE,
-            "round_to": X,
+            "round_to": 2,  // Use 2 unless historical analysis shows repeated failures
             "global_pruning": true,
             "rationale": "Baseline CNN strategy for {model_name} on {dataset}: Using conservative channel ratio to target {target_ratio*100:.0f}% reduction while preserving accuracy. Channel ratio chosen because [reasoning], importance chosen because [reasoning].",
             "architecture_type": "cnn"
@@ -904,16 +938,16 @@ class AnalysisAgent:
             # Conservative fallback when LLM completely fails
             if 'resnet' in model_name.lower():
                 fallback_channel = target_ratio * 0.6
-                fallback_importance = "taylor" if dataset.lower() == 'imagenet' else "l1norm"
-                fallback_round_to = 8 if dataset.lower() == 'imagenet' else 4
+                fallback_importance = "taylor"
+                fallback_round_to = 2 if dataset.lower() == 'imagenet' else 4
             elif 'convnext' in model_name.lower():
                 fallback_channel = target_ratio * 0.5  # More conservative for ConvNext
                 fallback_importance = "taylor"
-                fallback_round_to = 4
+                fallback_round_to = 2
             else:
                 fallback_channel = target_ratio * 0.7
-                fallback_importance = "taylor" if dataset.lower() == 'imagenet' else "l1norm"
-                fallback_round_to = 4
+                fallback_importance = "taylor"
+                fallback_round_to = 2
             
             return {
                 "importance_criterion": fallback_importance,
@@ -937,15 +971,15 @@ class AnalysisAgent:
         if 'resnet' in model_name.lower():
             emergency_channel = target_ratio * 0.4  # Very conservative
             emergency_importance = "taylor"
-            emergency_round_to = 4
+            emergency_round_to = 2
         elif 'convnext' in model_name.lower():
             emergency_channel = target_ratio * 0.3  # Ultra conservative for ConvNext
             emergency_importance = "taylor"
             emergency_round_to = 2
         else:
             emergency_channel = target_ratio * 0.5
-            emergency_importance = "l1norm"
-            emergency_round_to = 4
+            emergency_importance = "taylor"
+            emergency_round_to = 2
         
         print(f"[🔧] Emergency CNN fallback: channel={emergency_channel:.4f}, {emergency_importance}, round_to={emergency_round_to}")
 
@@ -975,6 +1009,13 @@ class AnalysisAgent:
         Use LLM to calculate CNN strategy based on Master Agent's strategic guidance.
         MACs-first: if target MACs are provided in strategic_guidance, aim to hit them within tolerance.
         """
+
+        round_to_instruction = """Use round_to=2 as the standard choice because:
+    1. PRECISION: Finer granularity allows more precise MAC targeting
+    2. ACCURACY PRESERVATION: Smaller pruning increments reduce risk of removing critical channel combinations
+    3. FINE-GRAINED CONTROL: Enables hitting exact MAC budgets more accurately
+    4. ITERATIVE REFINEMENT: Easier to fine-tune results with smaller steps"""
+
 
         # ---------- Pull MACs-first context (if provided) ----------
         def _to_g(val):
@@ -1049,6 +1090,8 @@ class AnalysisAgent:
 
         # ---------- Prompt (MACs-first primary, ratio as fallback) ----------
         prompt = f"""You are an expert Analysis Agent in CNN pruning for {model_name} on {dataset}.
+
+        CRITICAL ROUND_TO INSTRUCTION: {round_to_instruction}
 
         {guidance_text}
 
@@ -1620,17 +1663,17 @@ class AnalysisAgent:
                 HumanMessage(content=prompt)
             ])
 
-            print(f"[DEBUG] Raw LLM response in history learning (MACs-first): len={len(response.content)}")
-            print(f"[DEBUG] First 500 chars: {response.content[:500]}")
-            print(f"[DEBUG] History entries provided: {len(history)}")
+            # print(f"[DEBUG] Raw LLM response in history learning (MACs-first): len={len(response.content)}")
+            # print(f"[DEBUG] First 500 chars: {response.content[:500]}")
+            # print(f"[DEBUG] History entries provided: {len(history)}")
 
             strategy_dict = parse_llm_json_response(response.content)
 
-            print(f"[DEBUG] Parsed strategy_dict: {strategy_dict}")
-            if isinstance(strategy_dict, dict):
-                print(f"[DEBUG] Suggested importance: {strategy_dict.get('importance_criterion')}")
-                print(f"[DEBUG] Suggested round_to: {strategy_dict.get('round_to')}")
-                print(f"[DEBUG] Suggested isomorphic ratios: {strategy_dict.get('isomorphic_group_ratios', {})}")
+            # print(f"[DEBUG] Parsed strategy_dict: {strategy_dict}")
+            # if isinstance(strategy_dict, dict):
+            #     print(f"[DEBUG] Suggested importance: {strategy_dict.get('importance_criterion')}")
+            #     print(f"[DEBUG] Suggested round_to: {strategy_dict.get('round_to')}")
+            #     print(f"[DEBUG] Suggested isomorphic ratios: {strategy_dict.get('isomorphic_group_ratios', {})}")
 
             if strategy_dict and 'isomorphic_group_ratios' in strategy_dict:
                 # Optional validation hook (kept as-is)
@@ -1704,7 +1747,7 @@ class AnalysisAgent:
             if deviation >= 0 and deviation <= 0.02:
                 status = "✅ ACCEPTABLE"
             elif deviation < 0:
-                status = f"❌ undersoot"
+                status = f"❌ undershoot"
             else:  # deviation > 0.02
                 status = f"❌ overshoot"
                 
@@ -1732,14 +1775,14 @@ class AnalysisAgent:
                 print(f"   ➡️ Learning trend: STABLE (minimal change)")
         
         # Check for repeated failures
-        undersoot_count = sum(1 for e in recent_attempts if e.get('achieved_ratio', 0) < target_ratio)
+        undershoot_count = sum(1 for e in recent_attempts if e.get('achieved_ratio', 0) < target_ratio)
         overshoot_count = sum(1 for e in recent_attempts if e.get('achieved_ratio', 0) > target_ratio + 0.02)
-        acceptable_count = len(recent_attempts) - undersoot_count - overshoot_count
+        acceptable_count = len(recent_attempts) - undershoot_count - overshoot_count
         
-        print(f"   📊 Recent pattern: {undersoot_count} undersoot, {acceptable_count} acceptable, {overshoot_count} overshoot")
+        print(f"   📊 Recent pattern: {undershoot_count} undershoot, {acceptable_count} acceptable, {overshoot_count} overshoot")
         
-        if undersoot_count == len(recent_attempts):
-            print(f"   ⚠️ PATTERN: All {undersoot_count} recent attempts undersoot target")
+        if undershoot_count == len(recent_attempts):
+            print(f"   ⚠️ PATTERN: All {undershoot_count} recent attempts undershoot target")
             print(f"   💡 RECOMMENDATION: Need HIGHER multipliers to reach acceptable range")
         elif overshoot_count == len(recent_attempts):
             print(f"   ⚠️ PATTERN: All {overshoot_count} recent attempts overshoot tolerance")
@@ -1918,12 +1961,12 @@ class AnalysisAgent:
                     HumanMessage(content=prompt)
                 ])
                 
-                print(f"[DEBUG] Enhanced learning LLM response length: {len(response.content)}")
+                # print(f"[DEBUG] Enhanced learning LLM response length: {len(response.content)}")
                 
                 strategy_dict = parse_llm_json_response(response.content)
 
-                print("[🧪] strategy_dict keys:", strategy_dict.keys())
-                print("[🧪] strategy_dict['mathematical_calculation']:", strategy_dict.get("mathematical_calculation"))
+                # print("[🧪] strategy_dict keys:", strategy_dict.keys())
+                # print("[🧪] strategy_dict['mathematical_calculation']:", strategy_dict.get("mathematical_calculation"))
 
                 
                 if strategy_dict and 'isomorphic_group_ratios' in strategy_dict:
@@ -2142,10 +2185,14 @@ class AnalysisAgent:
             - Valid: 1, 2, 4, 8, 16, or null
             - NEVER use: 0.1, 0.01, 0.5, or any decimals
 
-            IMPORTANCE CRITERION OPTIONS:
-            - "taylor": Gradient-based, most accurate but computationally expensive
-            - "l1norm": Magnitude-based, efficient, good for smaller datasets
-            - "l2norm": Alternative magnitude-based approach
+            IMPORTANCE CRITERION OPTIONS (RESEARCH-BASED PRIORITY ORDER):
+            - "taylor": PREFERRED - Uses gradient information, proven superior to magnitude-based methods
+            - "l1norm": FALLBACK - Use only if Taylor has failed repeatedly 
+            - "l2norm": ALTERNATIVE FALLBACK - Use only if both Taylor and L1 have failed
+
+            CRITICAL: Your system already uses isomorphic pruning by default (global_pruning=true), so "taylor" gives you the optimal Isomorphic + Taylor combination that achieves SOTA results.
+
+            DEFAULT CHOICE: Always start with "taylor" unless historical analysis shows repeated Taylor failures.
 
             OUTPUT FORMAT (JSON only):
             {{
@@ -2185,17 +2232,17 @@ class AnalysisAgent:
                 ])
                 
                 # Debug output
-                print(f"[DEBUG] Raw LLM response in strategic guidance:")
-                print(f"[DEBUG] Response length: {len(response.content)}")
-                print(f"[DEBUG] First 500 chars: {response.content[:500]}")
-                print(f"[DEBUG] Complete signatures to avoid: {len(avoid_complete_signatures)}")
+                # print(f"[DEBUG] Raw LLM response in strategic guidance:")
+                # print(f"[DEBUG] Response length: {len(response.content)}")
+                # print(f"[DEBUG] First 500 chars: {response.content[:500]}")
+                # print(f"[DEBUG] Complete signatures to avoid: {len(avoid_complete_signatures)}")
                 
                 strategy_dict = parse_llm_json_response(response.content)
                 
-                print(f"[DEBUG] Parsed strategy_dict: {strategy_dict}")
-                print(f"[DEBUG] Suggested importance: {strategy_dict.get('importance_criterion')}")
-                print(f"[DEBUG] Suggested round_to: {strategy_dict.get('round_to')}")
-                print(f"[DEBUG] Suggested isomorphic ratios: {strategy_dict.get('isomorphic_group_ratios', {})}")
+                # print(f"[DEBUG] Parsed strategy_dict: {strategy_dict}")
+                # print(f"[DEBUG] Suggested importance: {strategy_dict.get('importance_criterion')}")
+                # print(f"[DEBUG] Suggested round_to: {strategy_dict.get('round_to')}")
+                # print(f"[DEBUG] Suggested isomorphic ratios: {strategy_dict.get('isomorphic_group_ratios', {})}")
                 
                 # ✅ NEW: Validate against complete signatures
                 if strategy_dict and avoid_complete_signatures:
@@ -2338,7 +2385,7 @@ class AnalysisAgent:
             guidance.append("🔽 DIRECTION: Use MUCH LOWER multipliers (reduce by 0.4-0.6)")
             guidance.append("💡 REASON: Previous multipliers caused over-pruning")
         elif last_achieved < target_ratio * (1 - macs_undershoot_tolerance_pct / 100.0):
-            guidance.append("📉 LAST ATTEMPT: undersoot parameter target")
+            guidance.append("📉 LAST ATTEMPT: undershoot parameter target")
             guidance.append("🔼 DIRECTION: Use HIGHER multipliers (increase by 0.2-0.3)")
             guidance.append("💡 REASON: Need more aggressive pruning to hit target")
         elif last_achieved > target_ratio * (1 + macs_overshoot_tolerance_pct / 100.0):
@@ -2427,7 +2474,7 @@ class AnalysisAgent:
                 return strategy_dict
         
         # If no close variation works, use LLM's original choice anyway
-        print(f"[⚠️] No unique variation found, keeping LLM choice: mlp={llm_mlp}, qkv={llm_qkv}")
+        # print(f"[⚠️] No unique variation found, keeping LLM choice: mlp={llm_mlp}, qkv={llm_qkv}")
         strategy_dict['isomorphic_group_ratios']['mlp_multiplier'] = llm_mlp
         strategy_dict['isomorphic_group_ratios']['qkv_multiplier'] = llm_qkv
         return strategy_dict
@@ -2511,8 +2558,8 @@ class AnalysisAgent:
             formatted.append(f"  Deviation: {(achieved_ratio - target_was)*100:.1f}% (tolerance: -{macs_undershoot_tolerance_pct:.1f}% to +{macs_overshoot_tolerance_pct:.1f}%)")
 
 
-            print("DEBUG entry keys:", list(entry.keys()))
-            print("DEBUG dataset raw:", entry.get("dataset"), type(entry.get("dataset")))
+            # print("DEBUG entry keys:", list(entry.keys()))
+            # print("DEBUG dataset raw:", entry.get("dataset"), type(entry.get("dataset")))
 
             # Add accuracy context for learning
             dataset = entry.get('dataset', '').lower()
@@ -2571,10 +2618,10 @@ class AnalysisAgent:
                     achieved = entry.get('achieved_ratio', 0)
                     target = entry.get('target_ratio', 0)
 
-                    print(f"[🔄] VIT STRATEGY REPETITION DETECTED:")
-                    print(f"   Previous: mlp={used_mlp:.3f}, qkv={used_qkv:.3f}, importance={used_importance}, round_to={used_round_to}")
-                    print(f"   Proposed: mlp={proposed_mlp:.3f}, qkv={proposed_qkv:.3f}, importance={proposed_importance}, round_to={proposed_round_to}")
-                    print(f"   Previous result: {achieved*100:.1f}% (target: {target*100:.1f}%)")
+                    # print(f"[🔄] VIT STRATEGY REPETITION DETECTED:")
+                    # print(f"   Previous: mlp={used_mlp:.3f}, qkv={used_qkv:.3f}, importance={used_importance}, round_to={used_round_to}")
+                    # print(f"   Proposed: mlp={proposed_mlp:.3f}, qkv={proposed_qkv:.3f}, importance={proposed_importance}, round_to={proposed_round_to}")
+                    # print(f"   Previous result: {achieved*100:.1f}% (target: {target*100:.1f}%)")
                     return True, entry
 
         return False, None
@@ -2616,11 +2663,11 @@ class AnalysisAgent:
                 achieved = entry.get('achieved_ratio', 0)
                 target = entry.get('target_ratio', 0)
                 
-                print(f"[🔄] ENHANCED SIMILARITY DETECTION:")
-                print(f"   Previous: mlp={used_mlp:.3f}, qkv={used_qkv:.3f}, importance={used_importance}, round_to={used_round_to}")
-                print(f"   Proposed: mlp={proposed_mlp:.3f}, qkv={proposed_qkv:.3f}, importance={proposed_importance}, round_to={proposed_round_to}")
-                print(f"   Previous result: {achieved*100:.1f}% (target: {target*100:.1f}%)")
-                print(f"   Similarity tolerance: {tolerance}")
+                # print(f"[🔄] ENHANCED SIMILARITY DETECTION:")
+                # print(f"   Previous: mlp={used_mlp:.3f}, qkv={used_qkv:.3f}, importance={used_importance}, round_to={used_round_to}")
+                # print(f"   Proposed: mlp={proposed_mlp:.3f}, qkv={proposed_qkv:.3f}, importance={proposed_importance}, round_to={proposed_round_to}")
+                # print(f"   Previous result: {achieved*100:.1f}% (target: {target*100:.1f}%)")
+                # print(f"   Similarity tolerance: {tolerance}")
                 return True, entry
         
         return False, None
@@ -2713,7 +2760,7 @@ class AnalysisAgent:
             else:
                 fallback_mlp = min(1.5, target_ratio / 0.6)  # moderate for CIFAR-10
                 fallback_qkv = min(1.0, target_ratio / 0.4)  # still cautious with attention
-                fallback_importance = "l1norm"
+                fallback_importance = "taylor"
                 fallback_round_to = 1
 
             return {
@@ -2755,8 +2802,8 @@ class AnalysisAgent:
             # More permissive but still conservative
             emergency_mlp = min(1.2, target_ratio * 0.8)
             emergency_qkv = min(0.6, target_ratio * 0.4)
-            emergency_importance = "l1norm"
-            emergency_round_to = 1
+            emergency_importance = "taylor"
+            emergency_round_to = 2
 
         print(f"[🔧] Emergency ViT fallback: mlp={emergency_mlp:.3f}, qkv={emergency_qkv:.3f}, "
             f"{emergency_importance}, round_to={emergency_round_to} (tol +{macs_overshoot_tolerance_pct:.1f}%/-{macs_undershoot_tolerance_pct:.1f}%)")
@@ -2815,7 +2862,7 @@ class AnalysisAgent:
                 if -undershoot_tol_pct <= macs_error_pct <= overshoot_tol_pct:
                     status = f"🎯 SUCCESS (MACs {macs_error_pct:+.2f}% vs target; allowed -{undershoot_tol_pct:.1f}%/+{overshoot_tol_pct:.1f}%)"
                 elif macs_error_pct > overshoot_tol_pct:
-                    status = f"📉 undersoot (too heavy: +{macs_error_pct:.2f}% over MACs budget beyond +{overshoot_tol_pct:.1f}% limit)"
+                    status = f"📉 undershoot (too heavy: +{macs_error_pct:.2f}% over MACs budget beyond +{overshoot_tol_pct:.1f}% limit)"
                 elif macs_error_pct < -undershoot_tol_pct:
                     status = f"📈 overshoot (too light: {macs_error_pct:.2f}% under budget beyond -{undershoot_tol_pct:.1f}% limit)"
                 else:
@@ -2944,19 +2991,19 @@ class AnalysisAgent:
                 new_mlp = ratios.get('mlp_multiplier', 0)
                 new_qkv = ratios.get('qkv_multiplier', 0)
                 
-                print(f"[🤖] LLM ViT variation strategy:")
-                print(f"   Original: mlp={original_mlp:.3f}, qkv={original_qkv:.3f}")
-                print(f"   Variation: mlp={new_mlp:.3f}, qkv={new_qkv:.3f}")
-                print(f"   Importance: {strategy_dict.get('importance_criterion', 'unknown')}")
-                print(f"   Round-to: {strategy_dict.get('round_to', 'unknown')}")
+                # print(f"[🤖] LLM ViT variation strategy:")
+                # print(f"   Original: mlp={original_mlp:.3f}, qkv={original_qkv:.3f}")
+                # print(f"   Variation: mlp={new_mlp:.3f}, qkv={new_qkv:.3f}")
+                # print(f"   Importance: {strategy_dict.get('importance_criterion', 'unknown')}")
+                # print(f"   Round-to: {strategy_dict.get('round_to', 'unknown')}")
                 
                 return strategy_dict
             else:
-                print(f"[⚠️] LLM ViT variation failed, using simple adjustment")
+                # print(f"[⚠️] LLM ViT variation failed, using simple adjustment")
                 return self._simple_vit_strategy_variation(original_strategy, previous_achieved, target_ratio)
                     
         except Exception as e:
-            print(f"[⚠️] LLM ViT variation failed: {e}")
+            # print(f"[⚠️] LLM ViT variation failed: {e}")
             return self._simple_vit_strategy_variation(original_strategy, previous_achieved, target_ratio)
 
     def _simple_vit_strategy_variation(self, original_strategy, previous_achieved, target_ratio, macs_overshoot_tolerance_pct=1.0, macs_undershoot_tolerance_pct=5.0):
@@ -2967,10 +3014,10 @@ class AnalysisAgent:
         original_qkv = original_ratios.get('qkv_multiplier', 0.3)
         
         if previous_achieved < target_ratio:
-            # undersoot, increase multipliers (more aggressive on MLP)
+            # undershoot, increase multipliers (more aggressive on MLP)
             new_mlp = min(2.0, original_mlp * 1.3)  # 30% increase
             new_qkv = min(1.5, original_qkv * 1.2)  # 20% increase (more conservative)
-            direction = "increased (undersoot)"
+            direction = "increased (undershoot)"
         else:
             # overshoot, decrease multipliers
             new_mlp = max(0.1, original_mlp * 0.8)  # 20% decrease
@@ -3186,7 +3233,7 @@ class AnalysisAgent:
 
         LEARNING STRATEGY:
         - If previous attempts overshoot the target → suggest lower channel ratio
-        - If previous attempts undersoot the target → suggest higher channel ratio
+        - If previous attempts undershoot the target → suggest higher channel ratio
         - If accuracy collapsed → identify what caused it and avoid those parameters
         - If accuracy was preserved → learn what made that strategy successful
 
@@ -3274,7 +3321,7 @@ class AnalysisAgent:
 
         ANALYSIS:
         - If previous overshoot: Reduce channel ratio
-        - If previous undersoot: Increase channel ratio  
+        - If previous undershoot: Increase channel ratio  
         - Consider changing importance criterion or round_to if needed
         - Make smart adjustments based on {model_name} characteristics
 
@@ -3325,9 +3372,9 @@ class AnalysisAgent:
             new_channel = original_channel * 0.9
             direction = "reduced (overshoot)"
         else:
-            # undersoot, increase by 10%
+            # undershoot, increase by 10%
             new_channel = original_channel * 1.1
-            direction = "increased (undersoot)"
+            direction = "increased (undershoot)"
         
         new_channel = max(0.1, min(0.7, new_channel))
         
@@ -3356,7 +3403,7 @@ class AnalysisAgent:
     """
     1. ANALYZES PREVIOUS RESULT:
     - If previous attempt overshoot target → suggests lower channel ratio
-    - If previous attempt undersoot target → suggests higher channel ratio
+    - If previous attempt undershoot target → suggests higher channel ratio
 
     2. LLM INTELLIGENCE:
     - Considers architecture-specific characteristics
@@ -3376,19 +3423,10 @@ class AnalysisAgent:
     # ENHANCED HISTORY FORMATTING FOR LEARNING
 
     def _determine_round_to(self, dataset):
-        """
-        ANALYSIS AGENT determines round_to based on dataset and hardware considerations
-        NOT from Master Agent suggestions
-        """
         if dataset.lower() == 'imagenet':
-            # For ImageNet, use hardware-efficient values
-            return 8  # Good balance of efficiency and flexibility
+            return random.choice([1, 2, 4, 8, 16, None])  # All possible workflow values
         else:
-            # For smaller datasets like CIFAR-10, more flexible
-            return 4  # Smaller models can use finer granularity
-
-
-
+            return random.choice([1, 2, 4, 8, 16, None])  # All possible workflow values
 
     async def _call_llm_with_prompt(self, enhanced_prompt, state):
         """Call LLM with the enhanced prompt and robust JSON parsing"""
@@ -3439,27 +3477,27 @@ class AnalysisAgent:
                 HumanMessage(content=state['query'])
             ])
             
-            print(f"[DEBUG] Raw Analysis Agent response:\n{response.content}")
+            # print(f"[DEBUG] Raw Analysis Agent response:\n{response.content}")
             
             # Use robust JSON parsing
             strategy_dict = parse_llm_json_response(response.content)
             
             if not strategy_dict:
-                print(f"[❌] Analysis Agent JSON parsing failed - using fallback")
+                # print(f"[❌] Analysis Agent JSON parsing failed - using fallback")
                 return self.safety_validator.create_safe_fallback(
                     state.get('dataset'), 
                     state.get('target_pruning_ratio')
                 )
             
-            print(f"[DEBUG] Parsed importance criterion: {strategy_dict.get('importance_criterion')}")
+            # print(f"[DEBUG] Parsed importance criterion: {strategy_dict.get('importance_criterion')}")
             print(f"[✅] Successfully parsed Analysis Agent response")
             
             return strategy_dict
             
         except Exception as e:
-            print(f"[⚠️] LLM call failed: {e}")
+            # print(f"[⚠️] LLM call failed: {e}")
             import traceback
-            print(f"[DEBUG] Traceback: {traceback.format_exc()}")
+            # print(f"[DEBUG] Traceback: {traceback.format_exc()}")
             return self.safety_validator.create_safe_fallback(
                 state.get('dataset'), 
                 state.get('target_pruning_ratio')
@@ -3509,7 +3547,7 @@ class AnalysisAgent:
             return final_validated
             
         except Exception as e:
-            print(f"[⚠️] Retry attempt failed: {e}, using original corrected strategy")
+            # print(f"[⚠️] Retry attempt failed: {e}, using original corrected strategy")
             return corrected_strategy
         
     
@@ -3598,7 +3636,7 @@ class AnalysisAgent:
                 
                 return strategy_dict
             else:
-                print(f"[⚠️] LLM failed to provide valid baseline strategy")
+                # print(f"[⚠️] LLM failed to provide valid baseline strategy")
                 raise ValueError("LLM baseline strategy parsing failed")
                 
         except Exception as e:
@@ -3608,15 +3646,15 @@ class AnalysisAgent:
             # Conservative fallback when LLM completely fails
             if 'resnet' in model_name.lower():
                 fallback_channel = target_ratio * 0.6
-                fallback_importance = "taylor" if dataset.lower() == 'imagenet' else "l1norm"
-                fallback_round_to = 8 if dataset.lower() == 'imagenet' else 4
+                fallback_importance = "taylor"
+                fallback_round_to = 2 if dataset.lower() == 'imagenet' else 4
             elif 'mobilenet' in model_name.lower():
                 fallback_channel = target_ratio * 0.7
-                fallback_importance = "l1norm"
+                fallback_importance = "taylor"
                 fallback_round_to = 2
             else:
                 fallback_channel = target_ratio * 0.7
-                fallback_importance = "taylor" if dataset.lower() == 'imagenet' else "l1norm"
+                fallback_importance = "taylor"
                 fallback_round_to = 4
             
             return {
@@ -3640,17 +3678,17 @@ class AnalysisAgent:
         if 'resnet' in model_name.lower():
             emergency_channel = target_ratio * 0.5  # Very conservative
             emergency_importance = "taylor"
-            emergency_round_to = 4
+            emergency_round_to = 2
         elif 'mobilenet' in model_name.lower():
             emergency_channel = target_ratio * 0.6
-            emergency_importance = "l1norm"
+            emergency_importance = "taylor"
             emergency_round_to = 2
         else:
             emergency_channel = target_ratio * 0.55
-            emergency_importance = "l1norm"
-            emergency_round_to = 4
+            emergency_importance = "taylor"
+            emergency_round_to = 2
         
-        print(f"[🔧] Emergency fallback: channel={emergency_channel:.4f}, {emergency_importance}, round_to={emergency_round_to}")
+        # print(f"[🔧] Emergency fallback: channel={emergency_channel:.4f}, {emergency_importance}, round_to={emergency_round_to}")
         
         return {
             "channel_pruning_ratio": emergency_channel,

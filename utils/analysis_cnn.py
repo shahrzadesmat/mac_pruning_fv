@@ -1,3 +1,5 @@
+import random
+
 class CNNLearningAnalyzer:
     """
     Enhanced learning system for CNN models that analyzes patterns and provides
@@ -294,6 +296,7 @@ class CNNLearningAnalyzer:
             'avg_channel_ratio': 0.0,
             'avg_achieved_macs': 0.0,
             'avg_macs_error_pct': 0.0,
+            'avg_deviation': 0.0,
             'systematic_undershoot': False,
             'systematic_overshoot': False,
             'closest_attempt': None,
@@ -312,7 +315,7 @@ class CNNLearningAnalyzer:
 
         # Averages
         analysis['avg_channel_ratio'] = sum(a['channel_ratio'] for a in attempts) / len(attempts)
-        analysis['avg_achieved_macs'] = (sum(a['achieved_macs'] for a in attempts) / len(attempts)) / 1e9
+        analysis['avg_achieved_macs'] = (sum(a['achieved_macs'] for a in attempts if a['achieved_macs'] is not None) / len(attempts)) / 1e9
         valid_errs = [a['macs_error_pct'] for a in attempts if a['macs_error_pct'] is not None]
         analysis['avg_macs_error_pct'] = (sum(valid_errs) / len(valid_errs)) if valid_errs else 0.0
 
@@ -328,19 +331,31 @@ class CNNLearningAnalyzer:
         analysis['most_aggressive'] = max(attempts, key=lambda x: x['channel_ratio'])
         analysis['most_conservative'] = min(attempts, key=lambda x: x['channel_ratio'])
 
-        # Group by channel ratio
+        # Group attempts by channel ratio for effectiveness analysis
         channel_groups = {}
-        for a in attempts:
-            ratio_key = round(a['channel_ratio'], 2)
-            channel_groups.setdefault(ratio_key, []).append(a)
+        for attempt in attempts:
+            ratio_key = round(attempt['channel_ratio'], 2)
+            if ratio_key not in channel_groups:
+                channel_groups[ratio_key] = []
+            channel_groups[ratio_key].append(attempt)
+
 
         for ratio, group in channel_groups.items():
             g_errs = [x['macs_error_pct'] for x in group if x['macs_error_pct'] is not None]
             avg_err = (sum(g_errs) / len(g_errs)) if g_errs else None
+            
+            # Safe MAC averaging with None filtering
+            valid_macs = [x['achieved_macs'] for x in group if x['achieved_macs'] is not None]
+            avg_achieved_macs = (sum(valid_macs) / len(valid_macs)) / 1e9 if valid_macs else 0.0
+            
+            # Safe accuracy averaging with None filtering  
+            valid_accuracies = [x['accuracy'] for x in group if x['accuracy'] is not None]
+            avg_accuracy = sum(valid_accuracies) / len(valid_accuracies) if valid_accuracies else 0.0
+            
             analysis['channel_ratio_effectiveness'][ratio] = {
-                'avg_achieved_macs': (sum(x['achieved_macs'] for x in group) / len(group)) / 1e9,
+                'avg_achieved_macs': avg_achieved_macs,
                 'avg_macs_error_pct': avg_err,
-                'avg_accuracy': sum(x['accuracy'] for x in group) / len(group),
+                'avg_accuracy': avg_accuracy,
                 'count': len(group),
                 'success_rate': sum(1 for x in group if (x['macs_error_pct'] is not None and -macs_undershoot_tolerance_pct <= x['macs_error_pct'] <= macs_overshoot_tolerance_pct)) / len(group)
             }
@@ -510,8 +525,8 @@ class CNNLearningAnalyzer:
             'catastrophic_failures': catastrophic_failures,
             'worst_undershoot': max(failures, key=lambda x: x['severity']) if failures else None,
             'avg_undershoot_severity': (
-                sum(f['severity'] for f in failures if f['type'] == 'undershoot') /
-                max(1, len([f for f in failures if f['type'] == 'undershoot']))
+                sum(f['severity'] for f in failures if f['type'] == 'undershoot' and f['severity'] is not None) /
+                max(1, len([f for f in failures if f['type'] == 'undershoot' and f['severity'] is not None]))
             ),
             'problematic_channel_ratios': self._identify_problematic_ratios(catastrophic_failures)
         }
@@ -570,7 +585,7 @@ class CNNLearningAnalyzer:
         if avg_macs_err_pct is not None:
             undershoot_severity_frac = max(0.0, float(avg_macs_err_pct)) / 100.0
         else:
-            undershoot_severity_frac = abs(float(avg_deviation_frac_legacy or 0.0))
+            undershoot_severity_frac = abs(float(avg_deviation_frac_legacy)) if avg_deviation_frac_legacy is not None else 0.0
 
         # =========================
         # SYSTEMATIC UNDERSHOOT
@@ -781,15 +796,13 @@ class CNNLearningAnalyzer:
         """Create baseline guidance when insufficient historical data (MAC-based)."""
 
         if dataset.lower() == 'imagenet':
-            # Conservative defaults for ImageNet (accuracy-preserving)
             baseline_channel = 0.5
             baseline_importance = 'taylor'
-            baseline_round_to = 8
+            baseline_round_to = 2
         else:
-            # Moderate defaults for CIFAR-10
             baseline_channel = 0.6
-            baseline_importance = 'l1norm'
-            baseline_round_to = 4
+            baseline_importance = 'taylor'
+            baseline_round_to = 2
 
         return {
             'pattern_analysis': None,
@@ -800,7 +813,7 @@ class CNNLearningAnalyzer:
                 'suggested_importance_criterion': baseline_importance,
                 'suggested_round_to': baseline_round_to,
                 'confidence': 'low',
-                'reasoning': [f"Baseline guidance for {dataset} CNN (insufficient historical data)"],
+                'reasoning': [f"Research-based baseline for {dataset} CNN: Using Taylor importance (SOTA with isomorphic pruning) and round_to=2 for optimal granularity"],
                 'mathematical_calculation': {
                     'baseline_approach': True,
                     'target_channel_pruning_estimate': baseline_channel,
@@ -1022,8 +1035,16 @@ class CNNLearningAnalyzer:
         ):
         """Create an enhanced prompt with comprehensive CNN learning analysis (MAC-first)."""
 
-        print(" macs_overshoot_tolerance_pct value in analysis_cnn.py is:",  macs_overshoot_tolerance_pct)
-        print(" macs_undershoot_tolerance_pct value in analysis_cnn.py is:",  macs_undershoot_tolerance_pct)
+        round_to_instruction = """Use round_to=2 as the standard choice because:
+        1. PRECISION: Finer granularity allows more precise MAC targeting
+        2. ACCURACY PRESERVATION: Smaller pruning increments reduce risk of removing critical channel combinations
+        3. FINE-GRAINED CONTROL: Enables hitting exact MAC budgets more accurately
+        4. ITERATIVE REFINEMENT: Easier to fine-tune results with smaller steps
+        Only choose a different value if you have specific evidence from the historical analysis that round_to=2 has failed repeatedly for this model/dataset combination."""
+
+
+        # print(" macs_overshoot_tolerance_pct value in analysis_cnn.py is:",  macs_overshoot_tolerance_pct)
+        # print(" macs_undershoot_tolerance_pct value in analysis_cnn.py is:",  macs_undershoot_tolerance_pct)
 
         # Get comprehensive analysis - FIXED: pass MAC parameters
         learning_analysis = self.analyze_cnn_channel_patterns(
@@ -1062,6 +1083,17 @@ class CNNLearningAnalyzer:
 
         prompt = f"""You are a CNN pruning expert with advanced MAC-based learning capabilities.
 
+        RESEARCH-BASED IMPORTANCE CRITERION PRIORITY:
+        Your system uses isomorphic pruning (global_pruning=true) which groups isomorphic structures.
+        Combined with Taylor criterion, this achieves SOTA performance:
+        - For CNNs: Isomorphic + Taylor shows >93% correlation with oracle ranking
+        - For ViTs: Isomorphic + Taylor dramatically outperforms magnitude-based methods
+        - Taylor uses gradient information vs. L1/L2 which rely on potentially biased weight distributions
+
+        RECOMMENDED: Start with "taylor" as importance_criterion based on research evidence. Consider l1norm or l2norm only if historical analysis shows consistent Taylor underperformance for this specific model/dataset combination.
+
+        CRITICAL ROUND_TO INSTRUCTION: {round_to_instruction}
+
         CRITICAL MAC-BASED LEARNING TASK: Based on comprehensive historical analysis, determine optimal CNN channel pruning parameters to meet a MAC budget of {tgt_str} (baseline {base_str}, efficiency target {efficiency_str}, tolerance +{macs_overshoot_tolerance_pct:.1f}%/-{macs_undershoot_tolerance_pct:.1f}%) on {dataset}.
 
         TARGET SPECIFICATIONS:
@@ -1081,7 +1113,7 @@ class CNNLearningAnalyzer:
         {{
             "importance_criterion": "taylor|l1norm|l2norm",
             "channel_pruning_ratio": YOUR_CALCULATED_VALUE_BASED_ON_MAC_ANALYSIS,
-            "round_to": INTEGER_VALUE,
+            "round_to": 2,  // Use 2 unless historical analysis shows repeated failures with round_to=2
             "global_pruning": true,
             "baseline_macs": {baseline_macs if baseline_macs is not None else "null"},
             "target_macs": {target_macs if target_macs is not None else "null"},

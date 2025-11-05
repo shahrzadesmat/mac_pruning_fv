@@ -13,6 +13,86 @@ from utils import logging_wandb
 import os
 
 
+def reattach_heads_and_tokens(model, original_model):
+    """
+    Reattaches head weights and tokens from the original model.
+    CRITICAL: Only reattaches when dimensions match to avoid catastrophic failures.
+    """
+    with torch.no_grad():
+        # ✅ ROBUST CHECK: Compare actual attention dimensions (not embed_dim attribute)
+        is_pruned = False
+        
+        # Check attention projection layer dimensions (the actual pruned dimension)
+        if hasattr(model, 'blocks') and len(model.blocks) > 0:
+            if hasattr(model.blocks[0], 'attn') and hasattr(model.blocks[0].attn, 'proj'):
+                pruned_dim = model.blocks[0].attn.proj.in_features
+                if hasattr(original_model, 'blocks') and len(original_model.blocks) > 0:
+                    if hasattr(original_model.blocks[0], 'attn') and hasattr(original_model.blocks[0].attn, 'proj'):
+                        orig_dim = original_model.blocks[0].attn.proj.in_features
+                        if pruned_dim != orig_dim:
+                            is_pruned = True
+                            print(f"[⚠️] Model was pruned - skipping head/token reattachment to avoid dimension mismatch")
+                            print(f"    Pruned attention dim: {pruned_dim}")
+                            print(f"    Original attention dim: {orig_dim}")
+                            return model
+        
+        # Backup check: Compare token shapes directly
+        if not is_pruned and hasattr(model, 'cls_token') and hasattr(original_model, 'cls_token'):
+            if model.cls_token is not None and original_model.cls_token is not None:
+                if model.cls_token.shape[-1] != original_model.cls_token.shape[-1]:
+                    is_pruned = True
+                    print(f"[⚠️] Model was pruned (token dim mismatch) - skipping reattachment")
+                    print(f"    Pruned token dim: {model.cls_token.shape[-1]}")
+                    print(f"    Original token dim: {original_model.cls_token.shape[-1]}")
+                    return model
+        
+        # If we reach here, dimensions match - proceed with reattachment
+        print(f"[📋] Dimensions match - safe to reattach components")
+        
+        # Classification heads
+        if hasattr(model, 'head') and hasattr(original_model, 'head'):
+            if isinstance(model.head, nn.Linear) and isinstance(original_model.head, nn.Linear):
+                if model.head.in_features == original_model.head.in_features:
+                    model.head.load_state_dict(original_model.head.state_dict())
+                    print(f"[✅] Reattached head (dim: {model.head.in_features})")
+                else:
+                    print(f"[⚠️] Skipping head - dim mismatch: {model.head.in_features} != {original_model.head.in_features}")
+
+        if hasattr(model, 'head_dist') and hasattr(original_model, 'head_dist'):
+            if isinstance(model.head_dist, nn.Linear) and isinstance(original_model.head_dist, nn.Linear):
+                if model.head_dist.in_features == original_model.head_dist.in_features:
+                    model.head_dist.load_state_dict(original_model.head_dist.state_dict())
+                    print(f"[✅] Reattached head_dist (dim: {model.head_dist.in_features})")
+                else:
+                    print(f"[⚠️] Skipping head_dist - dim mismatch: {model.head_dist.in_features} != {original_model.head_dist.in_features}")
+
+        # Tokens and embeddings
+        if hasattr(model, 'cls_token') and hasattr(original_model, 'cls_token'):
+            if model.cls_token is not None and original_model.cls_token is not None:
+                if model.cls_token.shape == original_model.cls_token.shape:
+                    model.cls_token.copy_(original_model.cls_token)
+                    print(f"[✅] Reattached cls_token (shape: {model.cls_token.shape})")
+                else:
+                    print(f"[⚠️] Skipping cls_token - shape mismatch: {model.cls_token.shape} != {original_model.cls_token.shape}")
+
+        if hasattr(model, 'dist_token') and hasattr(original_model, 'dist_token'):
+            if model.dist_token is not None and original_model.dist_token is not None:
+                if model.dist_token.shape == original_model.dist_token.shape:
+                    model.dist_token.copy_(original_model.dist_token)
+                    print(f"[✅] Reattached dist_token (shape: {model.dist_token.shape})")
+                else:
+                    print(f"[⚠️] Skipping dist_token - shape mismatch: {model.dist_token.shape} != {original_model.dist_token.shape}")
+
+        if hasattr(model, 'pos_embed') and hasattr(original_model, 'pos_embed'):
+            if model.pos_embed is not None and original_model.pos_embed is not None:
+                if model.pos_embed.shape == original_model.pos_embed.shape:
+                    model.pos_embed.copy_(original_model.pos_embed)
+                    print(f"[✅] Reattached pos_embed (shape: {model.pos_embed.shape})")
+                else:
+                    print(f"[⚠️] Skipping pos_embed - shape mismatch: {model.pos_embed.shape} != {original_model.pos_embed.shape}")
+
+    return model   
+
 class EvaluationAgent:
     def __init__(self, llm=None):
         self.llm = llm or get_llm()
@@ -107,21 +187,24 @@ class EvaluationAgent:
         else:
             return {'accuracy': accuracy}
 
-    def _get_dataset_specific_thresholds(self, dataset: str):
-        """Get dataset-specific success thresholds"""
-        
-        if dataset.lower() == 'imagenet':
-            return {
-                'accuracy_threshold': 1.0,  # Top-1 accuracy threshold
-                'mac_tolerance_pct': 2.0,    # 2% MAC tolerance for ImageNet
-                'top5_threshold': 90.0       # Top-5 accuracy threshold
-            }
-        else:  # CIFAR-10
-            return {
-                'accuracy_threshold': 85.0,  # Accuracy threshold
-                'mac_tolerance_pct': 1.0,    # 1% MAC tolerance for CIFAR-10
-                'top5_threshold': None       # Not applicable
-            }
+
+    
+
+    # def _get_dataset_specific_thresholds(self, dataset: str):
+    #     """Get dataset-specific success thresholds"""
+    #     
+    #     if dataset.lower() == 'imagenet':
+    #         return {
+    #             'accuracy_threshold': 1.0,  # Top-1 accuracy threshold
+    #             'mac_tolerance_pct': 2.0,    # 2% MAC tolerance for ImageNet
+    #             'top5_threshold': 90.0       # Top-5 accuracy threshold
+    #         }
+    #     else:  # CIFAR-10
+    #         return {
+    #             'accuracy_threshold': 85.0,  # Accuracy threshold
+    #             'mac_tolerance_pct': 1.0,    # 1% MAC tolerance for CIFAR-10
+    #             'top5_threshold': None       # Not applicable
+    #         }
 
     def _extract_zero_shot_accuracy(self, state: Dict, dataset: str):
         """Extract zero-shot accuracy from stored pruning results"""
@@ -165,40 +248,53 @@ class EvaluationAgent:
             return
         
         current_revision = state.get('revision_number', 0)
+        # print(f"[DEBUG] Looking for revision {current_revision} in history")
         
-        # Find the history entry for current revision
-        for entry in state['history']:
-            if entry.get('revision') == current_revision:
-                
-                # Only update if this was a candidate model (within tolerance)
-                print(f"[DEBUG] is_candidate_model :  {entry.get('is_candidate_model')}")
-                if entry.get('is_candidate_model', False):
-                    print(f"[📝] Updating candidate model history with fine-tuned results")
-                    
-                    # Add fine-tuned results based on dataset
-                    if dataset.lower() == 'imagenet':
-                        if 'fine_tuned_top1_accuracy' in eval_results:
-                            entry['fine_tuned_top1_accuracy'] = eval_results['fine_tuned_top1_accuracy']
-                        if 'fine_tuned_top5_accuracy' in eval_results:
-                            entry['fine_tuned_top5_accuracy'] = eval_results['fine_tuned_top5_accuracy']
-                    else:
-                        if 'fine_tuned_accuracy' in eval_results:
-                            entry['fine_tuned_accuracy'] = eval_results['fine_tuned_accuracy']
-                    
-                    # Improvement metrics
-                    if 'top1_accuracy_improvement' in eval_results:
-                        entry['top1_accuracy_improvement'] = eval_results['top1_accuracy_improvement']
-                    if 'accuracy_improvement' in eval_results:
-                        entry['accuracy_improvement'] = eval_results['accuracy_improvement']
-                    
-                    # Store fine-tuned model checkpoint reference
-                    if 'fine_tuning_results' in state and 'checkpoint_path' in state['fine_tuning_results']:
-                        entry['fine_tuned_checkpoint'] = state['fine_tuning_results']['checkpoint_path']
-                    
-                    print(f"[✅] Updated candidate history entry for revision {current_revision}")
+        # Find the most recent candidate model that needs updating
+        target_entry = None
+        for entry in reversed(state['history']):
+            # print(f"[DEBUG] History entry: rev={entry.get('revision')}, is_candidate={entry.get('is_candidate_model')}")
+            
+            if entry.get('is_candidate_model', False):
+                # Check if it already has fine-tuned results
+                if dataset.lower() == 'imagenet':
+                    has_results = entry.get('fine_tuned_top1_accuracy') is not None
                 else:
-                    print(f"[⚠️] Skipping history update - revision {current_revision} was not a candidate model")
-                break
+                    has_results = entry.get('fine_tuned_accuracy') is not None
+                
+                if not has_results:
+                    target_entry = entry
+                    # print(f"[DEBUG] Found candidate needing update at revision {entry.get('revision')}")
+                    break
+        
+        if target_entry:
+            # print(f"[📝] Updating candidate model history with fine-tuned results")
+            
+            # Add fine-tuned results based on dataset
+            if dataset.lower() == 'imagenet':
+                if 'fine_tuned_top1_accuracy' in eval_results:
+                    target_entry['fine_tuned_top1_accuracy'] = eval_results['fine_tuned_top1_accuracy']
+                if 'fine_tuned_top5_accuracy' in eval_results:
+                    target_entry['fine_tuned_top5_accuracy'] = eval_results['fine_tuned_top5_accuracy']
+            else:
+                if 'fine_tuned_accuracy' in eval_results:
+                    target_entry['fine_tuned_accuracy'] = eval_results['fine_tuned_accuracy']
+            
+            # Improvement metrics
+            if 'top1_accuracy_improvement' in eval_results:
+                target_entry['top1_accuracy_improvement'] = eval_results['top1_accuracy_improvement']
+            if 'accuracy_improvement' in eval_results:
+                target_entry['accuracy_improvement'] = eval_results['accuracy_improvement']
+            
+            # Store fine-tuned model checkpoint reference
+            if 'fine_tuning_results' in state and 'checkpoint_path' in state['fine_tuning_results']:
+                target_entry['fine_tuned_checkpoint'] = state['fine_tuning_results']['checkpoint_path']
+            
+            # print(f"[✅] Updated candidate history entry for revision {target_entry.get('revision')}")
+        else:
+            pass
+            # print(f"[⚠️] No candidate model found needing fine-tuned results update")
+
 
     @time_it_async("6. Evaluation Agent")
     async def evaluate(self, state: Dict) -> Dict:
@@ -210,7 +306,7 @@ class EvaluationAgent:
         data_path = state.get("data_path", "./data")
         
         print(f"\n[📊] Starting comprehensive {dataset.upper()} evaluation...")
-        print(f"[📊] Dataset: {dataset} ({num_classes} classes)")
+        # print(f"[📊] Dataset: {dataset} ({num_classes} classes)")
 
         # Check for pruning success
         pruning_success = (
@@ -229,7 +325,7 @@ class EvaluationAgent:
             
             # Setup device
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            print(f"[💻] Using device: {device}")
+            # print(f"[💻] Using device: {device}")
 
             # Gather MAC-based pruning metrics
             pruning_results = state.get('prune', {}).get('pruning_results', {})
@@ -259,8 +355,9 @@ class EvaluationAgent:
             mac_efficiency = (achieved_macs / baseline_macs) * 100 if baseline_macs > 0 else 0
             mac_error_pct = ((achieved_macs - target_macs) / target_macs) * 100 if target_macs > 0 else 0
 
-            # Get dataset-specific thresholds
-            thresholds = self._get_dataset_specific_thresholds(dataset)
+
+            # Use CLI-provided accuracy threshold directly
+            accuracy_threshold = state.get('accuracy_threshold', 1.0)
 
             eval_results = {
                 'dataset': dataset,
@@ -272,11 +369,11 @@ class EvaluationAgent:
                 'mac_error_pct': mac_error_pct,
                 'macs_overshoot_tolerance_pct': macs_overshoot_tolerance_pct,
                 'macs_undershoot_tolerance_pct': macs_undershoot_tolerance_pct,
-                'accuracy_threshold': thresholds['accuracy_threshold']
+                'accuracy_threshold': accuracy_threshold
             }
 
             # ✅ CRITICAL FIX: Use stored zero-shot results from pruning phase
-            print(f"\n[📊] Extracting stored zero-shot results from pruning phase...")
+            # print(f"\n[📊] Extracting stored zero-shot results from pruning phase...")
             
             zero_shot_results = self._extract_zero_shot_accuracy(state, dataset)
             
@@ -297,9 +394,14 @@ class EvaluationAgent:
                 
                 # Load test data for fine-tuned evaluation
                 test_loader, test_dataset = self._setup_dataset_test_data(dataset, data_path)
-                print(f"[📊] Test dataset size: {len(test_dataset)} samples")
+                # print(f"[📊] Test dataset size: {len(test_dataset)} samples")
                 
                 fine_tuned_model = fine_tuned_model.to(device)
+
+                original_model = state.get('original_model')
+                if original_model:
+                    fine_tuned_model = reattach_heads_and_tokens(fine_tuned_model, original_model)
+
                 ft_results = self._evaluate_model(fine_tuned_model, test_loader, device, dataset)
                 
                 if dataset.lower() == 'imagenet':
@@ -354,22 +456,21 @@ class EvaluationAgent:
             # Check MAC deviation and success flags (dataset-aware)
             mac_overshoot_tolerance_g = target_macs * (macs_overshoot_tolerance_pct / 100.0)
             mac_undershoot_tolerance_g = target_macs * (macs_undershoot_tolerance_pct / 100.0)
-            mac_overshoot_tolerance_g = target_macs * (macs_overshoot_tolerance_pct / 100.0)
-            mac_undershoot_tolerance_g = target_macs * (macs_undershoot_tolerance_pct / 100.0)
+
             # Then check against the appropriate tolerance
             mac_error = achieved_macs - target_macs
             mac_within_tolerance = (-mac_undershoot_tolerance_g <= mac_error <= mac_overshoot_tolerance_g)
-            thresh = state.get('accuracy_threshold', thresholds['accuracy_threshold'])
             
             # Get final accuracy (primary metric for each dataset)
             if dataset.lower() == 'imagenet':
                 final_acc = eval_results.get('fine_tuned_top1_accuracy', eval_results.get('zero_shot_top1_accuracy', 0.0))
                 final_top5 = eval_results.get('fine_tuned_top5_accuracy', eval_results.get('zero_shot_top5_accuracy', 0.0))
-                passed_acc = final_acc >= thresh
-                passed_top5 = final_top5 >= thresholds.get('top5_threshold', 90.0) if final_top5 > 0 else True
+                passed_acc = final_acc >= accuracy_threshold
+                passed_top5 = True
             else:
                 final_acc = eval_results.get('fine_tuned_accuracy', eval_results.get('zero_shot_accuracy', 0.0))
-                passed_acc = final_acc >= thresh
+                final_top5 = 0.0  # Not applicable for CIFAR-10
+                passed_acc = final_acc >= accuracy_threshold
                 passed_top5 = True  # Not applicable for CIFAR-10
             
             passed_mac_target = mac_within_tolerance
@@ -380,7 +481,7 @@ class EvaluationAgent:
                 'passed_accuracy_threshold': passed_acc,
                 'passed_mac_target': passed_mac_target,
                 'final_accuracy': final_acc,
-                'success': passed_acc and passed_mac_target and passed_top5
+                'success': passed_acc and passed_mac_target
             })
 
             # Add ImageNet-specific success criteria
@@ -400,7 +501,7 @@ class EvaluationAgent:
 
             
             if dataset.lower() == 'imagenet':
-                print(f"  - Final Top-1 Accuracy: {final_acc:.2f}% (threshold: {thresh:.1f}%)")
+                print(f"  - Final Top-1 Accuracy: {final_acc:.2f}% (threshold: {accuracy_threshold:.1f}%)")
                 if final_top5 > 0:
                     print(f"  - Final Top-5 Accuracy: {final_top5:.2f}%")
                     
@@ -410,7 +511,7 @@ class EvaluationAgent:
                 if 'top5_accuracy_improvement' in eval_results:
                     print(f"  - Top-5 Improvement: {eval_results['top5_accuracy_improvement']:.2f}%")
             else:
-                print(f"  - Final Accuracy: {final_acc:.2f}% (threshold: {thresh:.1f}%)")
+                print(f"  - Final Accuracy: {final_acc:.2f}% (threshold: {accuracy_threshold:.1f}%)")
                 if 'accuracy_improvement' in eval_results:
                     print(f"  - Accuracy Improvement: {eval_results['accuracy_improvement']:.2f}%")
             

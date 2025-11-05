@@ -7,6 +7,52 @@ import json
 from datetime import datetime
 
 
+def restore_attention_patches_from_metadata(model):
+    """Restore attention patches from saved metadata after loading a model"""
+    import types
+    import torch.nn.functional as F
+    
+    if not hasattr(model, '_pruning_metadata'):
+        print("[⚠️] No pruning metadata found - model may not have been properly patched")
+        return False
+    
+    restored_count = 0
+    for name, metadata in model._pruning_metadata.items():
+        module = dict(model.named_modules()).get(name)
+        if module and hasattr(module, 'qkv') and hasattr(module, 'proj'):
+            # Restore metadata
+            module.head_dim = metadata['head_dim']
+            module.num_heads = metadata['num_heads']
+            if hasattr(module, 'scale'):
+                module.scale = metadata['head_dim'] ** -0.5
+            
+            # Re-apply monkey patch
+            def patched_forward(self, x, attn_mask=None):
+                B, N, C = x.shape
+                qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, self.head_dim).permute(2, 0, 3, 1, 4)
+                q, k, v = qkv.unbind(0)
+                
+                if hasattr(F, 'scaled_dot_product_attention'):
+                    x = F.scaled_dot_product_attention(
+                        q, k, v, dropout_p=self.attn_drop.p if self.training else 0.
+                    )
+                else:
+                    attn = (q @ k.transpose(-2, -1)) * self.scale
+                    attn = attn.softmax(dim=-1)
+                    attn = self.attn_drop(attn)
+                    x = (attn @ v)
+                
+                actual_output_dim = self.num_heads * self.head_dim
+                x = x.transpose(1, 2).reshape(B, N, actual_output_dim)
+                x = self.proj(x)
+                x = self.proj_drop(x)
+                return x
+            
+            module.forward = types.MethodType(patched_forward, module)
+            restored_count += 1
+    
+    print(f"[🔧] Restored attention patches for {restored_count} modules")
+    return restored_count > 0
 
 async def save_final_best_model(state):
     """
@@ -90,7 +136,7 @@ async def save_final_best_model(state):
     if pruned_checkpoint and os.path.exists(pruned_checkpoint):
         try:
             ckpt = torch.load(pruned_checkpoint, map_location='cpu')
-            print(f"[DEBUG] Checkpoint keys: {list(ckpt.keys())}")
+            # print(f"[DEBUG] Checkpoint keys: {list(ckpt.keys())}")
             
             # Try different possible keys where the model might be stored
             pruned_model = (ckpt.get('complete_model') or 
@@ -101,13 +147,15 @@ async def save_final_best_model(state):
             # If still None and there's only one item, assume that's the model
             if pruned_model is None and len(ckpt.keys()) == 1:
                 pruned_model = list(ckpt.values())[0]
-                print(f"[INFO] Using single checkpoint value as model")
-            
+                # print(f"[INFO] Using single checkpoint value as model")
+                restore_attention_patches_from_metadata(pruned_model)
             if pruned_model is not None:
                 checkpoint_src = pruned_checkpoint
-                print(f"[✅] Loaded pruned model object from {pruned_checkpoint}")
+                # print(f"[✅] Loaded pruned model object from {pruned_checkpoint}")
+                restore_attention_patches_from_metadata(pruned_model)
             else:
-                print(f"[⚠️] No model found in checkpoint keys: {list(ckpt.keys())}")
+                pass
+                # print(f"[⚠️] No model found in checkpoint keys: {list(ckpt.keys())}")
                 
         except Exception as e:
             print(f"[⚠️] Failed to load {pruned_checkpoint}: {e}")
@@ -133,18 +181,38 @@ async def save_final_best_model(state):
     weights_filepath = os.path.join(output_dir, weights_filename)
     
     torch.save(pruned_model.state_dict(), weights_filepath)
-    print(f"[💾] Saved model weights (state_dict): {weights_filepath}")
-    print("    ↳ Use with: model.load_state_dict(torch.load(filepath))")
-    print("    ↳ Requires: Same architecture code + model = create_model(...)")
+    # print(f"[💾] Saved model weights (state_dict): {weights_filepath}")
+    # print("    ↳ Use with: model.load_state_dict(torch.load(filepath))")
+    # print("    ↳ Requires: Same architecture code + model = create_model(...)")
     
     # 4-B: Save full model (architecture + weights) - COMPLETE but less portable
     full_filename = f"{base_filename}_full.pt"
     full_filepath = os.path.join(output_dir, full_filename)
+
+    # ✅ CRITICAL: Preserve attention dimension fixes before saving
+    if hasattr(pruned_model, '_pruning_metadata'):
+        print(f"[🔧] Preserving attention dimension metadata for {len(pruned_model._pruning_metadata)} modules")
+    else:
+        # If metadata missing, create it from current state
+        pruned_model._pruning_metadata = {}
+        for name, module in pruned_model.named_modules():
+            if hasattr(module, 'qkv') and hasattr(module, 'proj'):
+                qkv_out = module.qkv.out_features
+                proj_in = module.proj.in_features
+                if qkv_out // 3 == proj_in and hasattr(module, 'head_dim'):
+                    pruned_model._pruning_metadata[name] = {
+                        'internal_dim': proj_in,
+                        'head_dim': module.head_dim,
+                        'num_heads': module.num_heads,
+                        'qkv_out_features': qkv_out,
+                        'proj_in_features': proj_in
+                    }
+        print(f"[🔧] Created attention metadata for {len(pruned_model._pruning_metadata)} modules")
     
     torch.save(pruned_model, full_filepath)
-    print(f"[💾] Saved full model (architecture + weights): {full_filepath}")
-    print("    ↳ Use with: model = torch.load(filepath)")
-    print("    ↳ Self-contained but environment-dependent")
+    # print(f"[💾] Saved full model (architecture + weights): {full_filepath}")
+    # print("    ↳ Use with: model = torch.load(filepath)")
+    # print("    ↳ Self-contained but environment-dependent")
     
     # 4-C: Save metadata for both formats
     metadata = {
@@ -177,14 +245,14 @@ async def save_final_best_model(state):
     with open(metadata_filepath, 'w') as f:
         json.dump(metadata, f, indent=2)
     
-    print(f"[📋] Saved metadata: {metadata_filepath}")
+    # print(f"[📋] Saved metadata: {metadata_filepath}")
 
-    print(
-        f"\n[🎉] Model saved in TWO formats!\n"
-        f"    🔹 Weights only (recommended): {weights_filename}\n"
-        f"    🔹 Full model (complete): {full_filename}\n"
-        f"    🔹 Metadata: {metadata_filename}"
-    )
+    # print(
+    #     f"\n[🎉] Model saved in TWO formats!\n"
+    #     f"    🔹 Weights only (recommended): {weights_filename}\n"
+    #     f"    🔹 Full model (complete): {full_filename}\n"
+    #     f"    🔹 Metadata: {metadata_filename}"
+    # )
 
     # ──────────────────────────────────────────────────────────────────────────
     # 5. Update state and return
