@@ -188,8 +188,7 @@ import json
 import asyncio
 from typing import Optional, Dict, List, Union
 from dataclasses import dataclass
-from langchain_core.messages import BaseMessage
-from langchain.schema import HumanMessage
+from langchain_core.messages import BaseMessage, HumanMessage
 from dotenv import load_dotenv
 
 from groq import Groq

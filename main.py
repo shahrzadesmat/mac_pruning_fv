@@ -1,15 +1,15 @@
 import os
 os.environ["WANDB_MODE"] = "disabled"
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
 from utils.logging_wandb import add_wandb_args
 from workflow import run_pruning_workflow
-from utils.timing import time_it, time_it_async
+from utils.timing import time_it, time_it_async, profiler
 from utils import logging_wandb
 import asyncio
-from utils.timing import profiler
 import copy
 from torchvision import datasets, transforms
-from typing import TypedDict, List, Dict, Any
+from typing import TypedDict, List, Dict, Any, Tuple, Optional
 from langchain_core.messages import SystemMessage, HumanMessage
 from deepseek_llm import DeepSeekLLM
 from langchain_core.prompts import ChatPromptTemplate
@@ -22,30 +22,24 @@ import pbench
 from pydantic import BaseModel, Field
 from langgraph.checkpoint.sqlite import SqliteSaver
 import re
-os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 from dotenv import load_dotenv, find_dotenv
 import openai
 import nest_asyncio
-import asyncio
 import json
 import random
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 import traceback
 from datasets import load_dataset
 import torchvision.transforms as T
 from torchvision.transforms.functional import InterpolationMode
 import glob
 from torchvision.datasets import ImageFolder
-from torchvision import transforms
-from torch.utils.data import DataLoader
 import pbench.data.presets
 import pbench.extension
 import pbench.forward_patch
-from typing import Dict, List, Tuple, Optional, Any
 from dataclasses import dataclass
 import time
 import functools
-from contextlib import contextmanager
 from collections import defaultdict
 import wandb
 from datetime import datetime
@@ -53,12 +47,9 @@ import math
 import threading
 from contextlib import contextmanager
 from sklearn.model_selection import train_test_split
-from torch.utils.data import Subset
 import gc
 import psutil
 import warnings
-import traceback
-from utils.timing import time_it, time_it_async, profiler
 import argparse
 
 

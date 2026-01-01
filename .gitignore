@@ -1,0 +1,7 @@
+.venv*
+*.tar*
+secrets.env
+slurm*
+*__pycache__
+*.pyc
+wandb
