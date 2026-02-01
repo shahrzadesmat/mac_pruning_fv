@@ -143,14 +143,37 @@ class MaskedLinear(nn.Linear):
     #             print(f"initializing with prior (strength={prior_strength}), Prior Sparsity: {sparsity}")
     #             print(f"mean: {self.gate.mean().item()}, std: {self.gate.std().item()}, max: {self.gate.max().item()}, min: {self.gate.min().item()}")
 
+    # def load_mask_prior(self, prior_strength=3):  
+    #     with torch.no_grad():  
+    #         sparsity = (self.mask==0).sum().item() / self.mask.numel()  
+    #         # Only process divisible portion for prior  
+    #         prior_mask_flat = self.mask.view(-1)[:self.divisible_size].view(-1, self.M)  
+    #         priors = (self._mask_options.unsqueeze(0) * prior_mask_flat).sum(dim=2)  
+    #         self.gate.data += (priors-self.N//2) * self.gate.std() * prior_strength  
+  
+    #         if torch.distributed.get_rank() == 0:  
+    #             print(f"initializing with prior (strength={prior_strength}), Prior Sparsity: {sparsity}")  
+    #             print(f"mean: {self.gate.mean().item()}, std: {self.gate.std().item()}, max: {self.gate.max().item()}, min: {self.gate.min().item()}")
+
     def load_mask_prior(self, prior_strength=3):  
         with torch.no_grad():  
-            sparsity = (self.mask==0).sum().item() / self.mask.numel()  
+            # Ensure mask is on the right device
+            self._mask_options = self._mask_options.to(self.weight.device)
+            
+            # Calculate sparsity
+            sparsity = (self.mask==0).sum().item() / self.mask.numel()
+            
             # Only process divisible portion for prior  
             prior_mask_flat = self.mask.view(-1)[:self.divisible_size].view(-1, self.M)  
-            priors = (self._mask_options.unsqueeze(0) * prior_mask_flat).sum(dim=2)  
-            self.gate.data += (priors-self.N//2) * self.gate.std() * prior_strength  
-  
-            if torch.distributed.get_rank() == 0:  
-                print(f"initializing with prior (strength={prior_strength}), Prior Sparsity: {sparsity}")  
-                print(f"mean: {self.gate.mean().item()}, std: {self.gate.std().item()}, max: {self.gate.max().item()}, min: {self.gate.min().item()}")
+            
+            # Compute priors: (num_blocks, num_combinations)
+            # Using einsum for clarity: i=blocks, j=candidates, k=M
+            priors = torch.einsum('ik,jk->ij', prior_mask_flat, self._mask_options)
+            
+            # Update gate with prior
+            gate_std = self.gate.std() if self.gate.numel() > 1 else torch.tensor(1.0)
+            self.gate.data += (priors - self.N//2) * gate_std * prior_strength
+            
+            # if torch.distributed.get_rank() == 0:  
+            print(f"initializing with prior (strength={prior_strength}), Prior Sparsity: {sparsity:.4f}")  
+            print(f"Block shape: {self.gate.shape}")
