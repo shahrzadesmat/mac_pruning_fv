@@ -29,44 +29,7 @@ import re
 import os
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
-from dotenv import load_dotenv, find_dotenv
-import openai
-import nest_asyncio
-import asyncio
-import json
-import random
-from torch.utils.data import DataLoader
-import traceback
-
-from datasets import load_dataset
-import torchvision.transforms as T
-from torchvision.transforms.functional import InterpolationMode
-# from pbench.utils import get_interpolation_mode
-import glob
-
-from torchvision.datasets import ImageFolder
-from torchvision import transforms
-from torch.utils.data import DataLoader
-
-import pbench.data.presets
-import pbench.extension
-import pbench.forward_patch
-
-from typing import Dict, List, Tuple, Optional, Any
-from dataclasses import dataclass
-import time
-import functools
-from contextlib import contextmanager
-from collections import defaultdict
 import wandb
-import math
-import threading
-from contextlib import contextmanager
-from sklearn.model_selection import train_test_split
-from torch.utils.data import Subset
-import gc
-import psutil
-import warnings
 from utils.pruning_math import extract_pruning_ratio, extract_mac_target
 from llm.provider import get_llm
 from utils.json_utils import deep_merge
@@ -1120,6 +1083,9 @@ async def run_pruning_workflow(model_name: str, query: str, dataset: str = "cifa
         print(f"[📁] Output directory: {output_dir}") 
         
         if state_mods:
+            if 'pruning_method' in state_mods:
+                pruning_method = state_mods['pruning_method']
+                print(f"[🔧] Set pruning method to {pruning_method}")
             if 'accuracy_threshold' in state_mods:
                 accuracy_threshold = state_mods['accuracy_threshold']
                 print(f"[🔧] Set accuracy threshold to {accuracy_threshold}%")
@@ -1182,6 +1148,7 @@ async def run_pruning_workflow(model_name: str, query: str, dataset: str = "cifa
         GLOBAL_STATE = {
             'target_pruning_ratio': pruning_ratio,
             'user_target_pruning_ratio': pruning_ratio,
+            'pruning_method': pruning_method,
             
             # MAC-based configuration (primary)
             'target_macs': target_macs,
@@ -1210,7 +1177,7 @@ async def run_pruning_workflow(model_name: str, query: str, dataset: str = "cifa
             'input_size': input_size,
             'data_path': data_path,
             'imagenet_subset': imagenet_subset,  # ADD: Include in initial state
-            
+            'pruning_method': pruning_method,
             # MAC-based configuration (primary)
             'target_macs': target_macs,
             'baseline_macs': baseline_macs,

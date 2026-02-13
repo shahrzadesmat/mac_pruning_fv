@@ -83,8 +83,10 @@ def replace_linear_with_(model, new_class, exclude=[], groups=None, **kwargs):
             # Build full name with prefix
             full_name = f"{prefix}.{name}" if prefix else name
             
-            # Skip if in exclude list
+            # Skip if in exclude list (supports both string names and module objects)
             if full_name in exclude or name in exclude:
+                continue
+            if any(child is item for item in exclude if isinstance(item, nn.Module)):
                 continue
             
             if isinstance(child, nn.Linear):

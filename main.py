@@ -59,31 +59,32 @@ if __name__ == "__main__":
     parser.add_argument('--model', type=str, default='resnet50', help='Model to prune')
     parser.add_argument('--macs_target_g', type=float, default=None, help='Target absolute MACs in G (e.g., 4.2 means 4.2G).')
     parser.add_argument('--macs_target_ratio', type=float, default=None, help='Target MACs as a fraction of baseline (e.g., 0.24).')
-    parser.add_argument('--macs_overshoot_tolerance_pct', type=float, default=1.0, 
+    parser.add_argument('--macs_overshoot_tolerance_pct', type=float, default=1.0,
                     help='Tolerance for MACs overshoot (higher than target) in percent (default 1%)')
-    parser.add_argument('--macs_undershoot_tolerance_pct', type=float, default=5.0, 
+    parser.add_argument('--macs_undershoot_tolerance_pct', type=float, default=5.0,
                     help='Tolerance for MACs undershoot (lower than target) in percent (default 5%)')
-    parser.add_argument('--dataset', type=str, choices=['cifar10', 'imagenet'], default='cifar10', 
+    parser.add_argument('--dataset', type=str, choices=['cifar10', 'imagenet'], default='cifar10',
                     help='Dataset to use (cifar10 or imagenet)')
-    parser.add_argument('--data_path', type=str, default='./data', 
+    parser.add_argument('--data_path', type=str, default='./data',
                     help='Path to dataset (for CIFAR-10: download dir, for ImageNet: arrow files dir)')
     parser.add_argument('--max_revisions', type=int, default=10, help='Maximum number of pruning iterations')
-    parser.add_argument('--accuracy_threshold', type=float, default=None, 
+    parser.add_argument('--accuracy_threshold', type=float, default=None,
                     help='Minimum acceptable accuracy (%) - auto-set based on dataset if not provided')
     parser.add_argument('--compact', action='store_true', help='Show extremely compact output')
     parser.add_argument('--validate', action='store_true', help='Run validation checks on results')
-    parser.add_argument('--imagenet_test', action='store_true', 
+    parser.add_argument('--imagenet_test', action='store_true',
                     help='Use 10% of ImageNet for testing (no effect on CIFAR-10)')
-    parser.add_argument('--imagenet_subset', type=float, default=1.0, 
+    parser.add_argument('--imagenet_subset', type=float, default=1.0,
                     help='Fraction of ImageNet to use (0.1 = 10%, no effect on CIFAR-10)')
-    parser.add_argument('--output_dir', type=str, default='/work/hdd/bdjd/models', 
+    parser.add_argument('--output_dir', type=str, default='/work/hdd/bdjd/models',
                    help='Directory to save the final best model')
-    parser.add_argument('--checkpoint_dir', type=str, default='./checkpoints', 
+    parser.add_argument('--checkpoint_dir', type=str, default='./checkpoints',
                    help='Directory to save intermediate checkpoints')
-
+    parser.add_argument('--pruning_method', type=str, default='structural', choices=['structural', 'unstructured', 'maskllm'],
+                        help='Pruning method to use')
     # Add WandB arguments
     parser = add_wandb_args(parser)
-    
+
     args = parser.parse_args()
 
     # Initialize WandB
@@ -92,9 +93,9 @@ if __name__ == "__main__":
         mac_tag = (f"{args.macs_target_g:.2f}G" if args.macs_target_g is not None
            else (f"{args.macs_target_ratio*100:.0f}pctMAC" if args.macs_target_ratio is not None else "MAC"))
         args.wandb_name = f"{args.model}_{args.dataset}_macs{mac_tag}_{timestamp}"
-    
+
     # print(f"[WandB] Initializing WandB run for project '{args.wandb_project}' with name '{args.wandb_name}'")
-    
+
     wandb_config = {
         # Model and dataset info
         'model_name': args.model,
@@ -104,16 +105,16 @@ if __name__ == "__main__":
         'data_path': args.data_path,
         'max_revisions': args.max_revisions,
         'accuracy_threshold': args.accuracy_threshold,
-        
+
         # All argparse arguments
         **vars(args),
-        
+
         # Additional metadata
         'framework': 'torch_pruning',
         'script_version': 'Agent_Prune_Relax',
         'timestamp': datetime.now().isoformat(),
     }
-    
+
     os.environ["WANDB_SERVICE_WAIT"] = "360"  # Increase timeout to 2 minutes
     os.environ["WANDB_START_METHOD"] = "thread"  # Use thread instead of fork
 
@@ -124,7 +125,7 @@ if __name__ == "__main__":
         config=wandb_config,
         mode=args.wandb_mode
     )
-    
+
     # print("[WandB] WandB initialized successfully.", flush=True)
 
     # Set subset fraction
@@ -159,7 +160,7 @@ if __name__ == "__main__":
         query = f"Prune {args.model} to a specified MACs budget on {args.dataset.upper()}."
 
     # print(f"[🚀] Starting {args.dataset.upper()} pruning workflow with query: {query}")
-    
+
     # Log initial configuration to WandB
     wandb.log({
         "workflow/started": True,
@@ -186,25 +187,25 @@ if __name__ == "__main__":
             wandb.log({"workflow/error": error_msg, "workflow/failed": True})
             wandb.finish()
             exit(1)
-        
+
         # print(f"[✅] Found ImageNet train/val folders at {args.data_path}")
 
     def setup_macs_targets(args):
         """Setup MACs targets from command line arguments"""
         macs_config = {}
-        
+
         if args.macs_target_g is not None:
             macs_config['target_macs'] = args.macs_target_g * 1e9  # Convert G to ops
             print(f"[🔧] Set target MACs to {args.macs_target_g}G ({macs_config['target_macs']} operations)")
         elif args.macs_target_ratio is not None:
             macs_config['macs_target_ratio'] = args.macs_target_ratio
             print(f"[🔧] Set target MACs ratio to {args.macs_target_ratio}")
-        
+
         macs_config['macs_overshoot_tolerance_pct'] = args.macs_overshoot_tolerance_pct
         macs_config['macs_undershoot_tolerance_pct'] = args.macs_undershoot_tolerance_pct
 
         return macs_config
-    
+
     # Add this after parsing arguments
     macs_config = setup_macs_targets(args)
 
@@ -212,14 +213,15 @@ if __name__ == "__main__":
     initial_state_mods = {
         'max_revisions': args.max_revisions,
         'accuracy_threshold': args.accuracy_threshold,
+        'pruning_method': args.pruning_method,
         **macs_config  # ✅ ADD: Include MACs configuration
     }
 
     try:
         # Run the workflow with dataset support
         results = asyncio.run(run_pruning_workflow(
-            model_name=args.model, 
-            query=query, 
+            model_name=args.model,
+            query=query,
             dataset=args.dataset,
             data_path=args.data_path,
             state_mods=initial_state_mods,
@@ -235,7 +237,7 @@ if __name__ == "__main__":
 
         # Log successful completion
         wandb.log({"workflow/completed_successfully": True})
-        
+
         # Print final model location
         if 'final_model_weights_path' in results and 'final_model_full_path' in results:
             print(f"\n[🎉] WORKFLOW COMPLETE!")
@@ -301,10 +303,10 @@ if __name__ == "__main__":
 
         for entry in history:
             # Try common accuracy field names in order of preference
-            final_acc = (entry.get("fine_tuned_top1_accuracy") or 
-                        entry.get("fine_tuned_accuracy") or 
+            final_acc = (entry.get("fine_tuned_top1_accuracy") or
+                        entry.get("fine_tuned_accuracy") or
                         entry.get("accuracy"))
-            
+
             # Only count models that were actually fine-tuned
             if final_acc is not None:
                 finetuned_models += 1
@@ -313,7 +315,7 @@ if __name__ == "__main__":
 
         # Systematic failure = we have fine-tuned models but none meet threshold
         is_systematic_failure = (finetuned_models > 0 and successful_finetuned_models == 0)
-        
+
 
         def _entry_achieved_macs(e):
             # direct absolute MACs if present
@@ -407,9 +409,9 @@ if __name__ == "__main__":
             passes_accuracy = ft_acc >= accuracy_threshold
             passes_mac_tolerance = _entry_achieved_macs_within_tolerance(
                 achieved_macs, target_macs, macs_overshoot_tol, macs_undershoot_tol)
-            
+
             model_success = passes_accuracy and passes_mac_tolerance
-            
+
             print(f"\n[✅] Selected model evaluation:")
             print(f"  Fine-tuned accuracy: {ft_acc:.2f}% (threshold: {accuracy_threshold}%) - {'PASS' if passes_accuracy else 'FAIL'}")
             print(f"  MAC compliance: {achieved_macs/1e9:.3f}G (target: {target_macs/1e9:.3f}G) - {'PASS' if passes_mac_tolerance else 'FAIL'}")
@@ -467,12 +469,12 @@ if __name__ == "__main__":
                 revision = entry.get('revision', 0)
                 baseline_macs = results.get("baseline_macs") or results.get("pruning_results", {}).get("baseline_macs") or results.get("prune", {}).get("pruning_results", {}).get("baseline_macs")
                 e_achieved_macs = entry.get("achieved_macs") or entry.get("final_macs") or entry.get("macs_after")
-                
+
                 if dataset == 'imagenet':
                     accuracy = entry.get('fine_tuned_top1_accuracy', entry.get('zero_shot_top1_accuracy', entry.get('accuracy', 0)))
                 else:
                     accuracy = entry.get('fine_tuned_accuracy', entry.get('zero_shot_accuracy', entry.get('accuracy', 0)))
-                    
+
                 strategy = entry.get('strategy_used', {})
                 criterion = strategy.get('importance_criterion', 'unknown')
                 if e_achieved_macs and baseline_macs:
@@ -509,7 +511,7 @@ if __name__ == "__main__":
                 print(f"2. 🔧 Verify model/dataset compatibility")
                 print(f"3. 🧪 Test with CIFAR-10 first to validate implementation")
                 print(f"4. 📚 Review pruning literature for typical ResNet50 limits on ImageNet")
-                
+
                 # Still show the "best" failed result
                 print(f"\n[📊] Best Failed Result:")
                 print(f"   Achieved pruning ratio: {achieved_ratio*100:.2f}%")
@@ -517,7 +519,7 @@ if __name__ == "__main__":
                 print(f"   Zero-shot {accuracy_label}: {zero_shot_acc:.2f}% (CATASTROPHIC)")
                 if dataset == 'imagenet' and zero_shot_top5:
                     print(f"   Zero-shot Top-5: {zero_shot_top5:.2f}%")
-                
+
             else:
                 # Normal summary for successful/partial runs
                 print("\n" + "="*70)
@@ -544,7 +546,7 @@ if __name__ == "__main__":
                     print(f"Zero-shot {accuracy_label}: {zero_shot_acc:.2f}%")
                 if ft_acc is not None:
                     print(f"Fine-tuned {accuracy_label}: {ft_acc:.2f}%")
-                    
+
                 # ImageNet Top-5 reporting
                 if dataset == 'imagenet':
                     if zero_shot_top5 is not None:
@@ -574,14 +576,14 @@ if __name__ == "__main__":
             if 'history' in results:
                 print(f"\n[📜] {args.dataset.upper()} Pruning History Summary:")
                 print("-"*80)
-                
+
                 if dataset == 'imagenet':
                     header = f"{'Iter':<5}{'Target MACs':<14}{'Achieved MACs':<16}{'Reduct%':<9}{'ZS Top-1':<10}{'FT Top-1':<10}{'ZS Top-5':<10}{'FT Top-5':<10}{'Criterion':<10}"
 
                 else:
                     header = f"{'Iter':<5}{'Target MACs':<14}{'Achieved MACs':<16}{'Reduct%':<9}{'ZS Acc':<10}{'FT Acc':<10}{'Improve':<10}{'Criterion':<10}"
 
-                
+
                 print(header)
                 print("-"*80)
 
@@ -598,21 +600,21 @@ if __name__ == "__main__":
                         ft_top1 = entry.get('fine_tuned_top1_accuracy', entry.get('accuracy'))
                         zs_top5 = entry.get('zero_shot_top5_accuracy', 0)
                         ft_top5 = entry.get('fine_tuned_top5_accuracy')
-                        
+
                         zs_top1_str = f"{zs_top1:.1f}%" if isinstance(zs_top1, (int, float)) and zs_top1 is not None else "N/A"
                         ft_top1_str = f"{ft_top1:.1f}%" if ft_top1 is not None else "N/A"
                         zs_top5_str = f"{zs_top5:.1f}%" if isinstance(zs_top5, (int, float)) and zs_top5 is not None else "N/A"
                         ft_top5_str = f"{ft_top5:.1f}%" if ft_top5 is not None else "N/A"
-                        
+
                         t_macs_str = f"{float(t_macs)/1e9:>8.2f}G" if t_macs is not None else "    N/A    "
                         a_macs_str = f"{float(a_macs)/1e9:>8.2f}G" if a_macs is not None else "    N/A    "
                         print(f"{i:<5}{t_macs_str}    {a_macs_str}      {red_pct:>6.1f}%  {zs_top1_str:<10}{ft_top1_str:<10}{zs_top5_str:<10}{ft_top5_str:<10}{criterion:<10}")
 
-                        
+
                     else:  # CIFAR-10
                         zs_acc = entry.get('zero_shot_accuracy', 0)
                         ft_acc = entry.get('fine_tuned_accuracy', entry.get('accuracy'))
-                        
+
                         if ft_acc is None or zs_acc is None:
                             zs_display = f"{zs_acc:.1f}%" if isinstance(zs_acc, (int, float)) and zs_acc is not None else "N/A"
                             t_macs_str = f"{float(t_macs)/1e9:>8.2f}G" if t_macs is not None else "    N/A    "
@@ -644,7 +646,7 @@ if __name__ == "__main__":
                 print("2. Trying a different importance criterion")
                 print("3. Increasing the fine-tuning epochs")
                 print("4. Using a different base model")
-                
+
                 if dataset == 'imagenet':
                     print("5. For ImageNet: Consider using pretrained models with stronger baseline performance")
                     print("6. For ImageNet: Try more conservative MACs budgets (only 10–30% MACs reduction at first)")
@@ -655,7 +657,7 @@ if __name__ == "__main__":
         import traceback
         print(traceback.format_exc())
         raise
-        
+
     finally:
         # Log timing summary to WandB
         profiler.get_summary()  # This prints the summary
@@ -686,7 +688,7 @@ if __name__ == "__main__":
             data=timing_data
         )
         wandb.log({"timing_breakdown": timing_table})
-        
+
         # Always finish WandB run
         # print("[WandB] Finishing WandB run...")
         wandb.finish()

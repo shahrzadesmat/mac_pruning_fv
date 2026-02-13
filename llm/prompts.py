@@ -510,13 +510,16 @@ def get_vit_analysis_content(dataset, target_macs, baseline_macs, macs_overshoot
             # Later attempts can explore other values
             round_to_options = [1, 4, 8, 16, None]
             effective_round_to = random.choice(round_to_options)
-    
+
+# TODO: Check here for N:M ratios
     if dataset.lower() == 'imagenet':
         safety_limits = f"""
 🚨 VIT MAC SAFETY LIMITS FOR IMAGENET 🚨 (MAC-BUDGET OPTIMIZED)
 ================================================================
 - Target MAC budget: {target_macs:.3f}G (efficiency: {mac_efficiency_target:.1f}% of baseline)
 - MAC tolerance: +{macs_overshoot_tolerance_pct:.1f}%/-{macs_undershoot_tolerance_pct:.1f}% ({tolerance_range})
+- MaskLLM is used for ViT pruning: your pruning ratios are automatically converted to N:M sparsity patterns.
+  (e.g., 0.50 pruning → 2:4, 0.25 pruning → 3:4, 0.20 pruning → 4:5). Just output scalar pruning ratios.
 - mlp_multiplier: Maximum 0.40 (prune up to 40% of MLP channels) - conservative for accuracy
 - qkv_multiplier: Maximum 0.15 (prune up to 15% of attention channels) - attention preservation
 - proj_multiplier: Keep at 0.0 (do not prune projection layers)
@@ -532,7 +535,7 @@ CRITICAL: These MAC limits allow achieving {target_macs:.3f}G target while maint
 """
         guidance = f"""
 ImageNet ViT MAC Guidance (UPDATED):
-- Use Taylor importance (MANDATORY for MAC-aware accuracy preservation)
+- Use MaskLLM method for Mac allocation efficiency (Mandatory)
 - Balance MLP and attention MAC allocation for optimal efficiency
 - Start conservative with MAC allocation, then optimize based on MAC measurements
 - Focus on MLP layers for primary MAC reduction, attention for fine-tuning
@@ -546,6 +549,8 @@ VIT MAC SAFETY LIMITS FOR CIFAR-10:
 ===================================
 - Target MAC budget: {target_macs:.3f}G (reduction: {mac_reduction_needed:.1f}%)
 - MAC tolerance: +{macs_overshoot_tolerance_pct:.1f}%/-{macs_undershoot_tolerance_pct:.1f}% ({tolerance_range})
+- MaskLLM is used for ViT pruning: your pruning ratios are automatically converted to N:M sparsity patterns.
+  (e.g., 0.50 pruning → 2:4, 0.25 pruning → 3:4, 0.20 pruning → 4:5). Just output scalar pruning ratios.
 - MLP MAC allocation: Maximum 50% of total target MAC budget (aggressive allowed)
 - QKV MAC allocation: Maximum 30% of total target MAC budget (moderate-aggressive)
 - More aggressive MAC allocation allowed for simpler dataset
@@ -557,7 +562,7 @@ MAC ALLOCATION VERIFICATION FOR {target_macs:.3f}G TARGET:
 """
         guidance = f"""
 CIFAR-10 ViT MAC Guidance:
-- L1/L2 norm importance acceptable for MAC optimization efficiency
+- Use MaskLLM method for Mac allocation efficiency (Mandatory)
 - Can use more aggressive MAC allocation than ImageNet
 - Less critical to preserve pretrained MAC patterns
 - Focus on achieving {target_macs:.3f}G MAC target with good accuracy recovery
@@ -567,10 +572,11 @@ CIFAR-10 ViT MAC Guidance:
     param_defs = f"""
 MAC-BASED PARAMETER DEFINITIONS:
 
-1. Importance Criterion (for MAC efficiency): 
+1. Importance Criterion (for MAC efficiency):
    - "taylor": REQUIRED for ImageNet ViTs (best MAC-aware accuracy preservation)
    - "l1norm"/"l2norm": OK for CIFAR-10 (MAC optimization efficiency acceptable)
    - MASTER AGENT SUGGESTED: Follow Master Agent's MAC-based recommendation
+   - NOTE: MaskLLM pruning is controlled via --pruning_method flag, NOT importance_criterion.
 
 2. MAC Allocation Strategy (KEY PARAMETERS):
    - mlp_multiplier: Percentage of target MAC budget allocated to MLP layers
@@ -592,6 +598,12 @@ MAC-BASED PARAMETER DEFINITIONS:
    - Example: qkv_multiplier=0.15 → 15% attention pruning (direct)
    - CRITICAL: Higher multipliers = MORE pruning = FEWER MACs; Lower multipliers = LESS pruning = MORE MACs
    - Valid range: 0.0 (no pruning) to 0.99 (maximum pruning)
+   
+5. MaskLLM N:M Conversion (automatic — do NOT output N:M values):
+   - The code automatically converts your scalar pruning ratios to N:M patterns:
+     0.50 pruning (50% dense) → 2:4,  0.40 pruning (60% dense) → 2:5
+     0.25 pruning (75% dense) → 3:4,  0.20 pruning (80% dense) → 4:5
+   - Just output scalar floats (e.g., mlp_multiplier: 0.40, qkv_multiplier: 0.15)
 
 MAC BUDGET CONTEXT:
 - Baseline MACs: {baseline_macs:.3f}G
@@ -615,14 +627,14 @@ Output your ViT MAC allocation strategy as JSON:
   "architecture_type": "vit",
   "master_suggestions_used": true,
   "isomorphic_group_ratios": {{
-    "mlp_multiplier": YOUR_CALCULATED_MLP_RATIO,
-    "qkv_multiplier": YOUR_CALCULATED_QKV_RATIO,
+    "mlp_multiplier": YOUR_MLP_PRUNING_RATIO_AS_FLOAT,
+    "qkv_multiplier": YOUR_QKV_PRUNING_RATIO_AS_FLOAT,
     "proj_multiplier": 0.0,
     "head_multiplier": 0.0
   }},
   "expected_mac_breakdown": {{
-    "mlp_mac_g": YOUR_MLP_PERCENTAGE * {target_macs:.3f} / 100,
-    "qkv_mac_g": YOUR_QKV_PERCENTAGE * {target_macs:.3f} / 100,
+    "mlp_mac_g": YOUR_EXPECTED_MLP_MACS,
+    "qkv_mac_g": YOUR_EXPECTED_QKV_MACS,
     "proj_mac_g": {target_macs * 0.08:.3f},
     "head_mac_g": {target_macs * 0.02:.3f},
     "total_mac_g": {target_macs:.3f}
@@ -642,7 +654,7 @@ CRITICAL MAC-BASED REQUIREMENTS:
 - No markdown code blocks
 - Use Master Agent's round_to suggestion: {effective_round_to}
 - Calculate actual MAC allocation percentages that sum to achieve {target_macs:.3f}G
-- Ensuremlp_multiplier + qkv_multiplier + proj_multiplier + head_multiplier ≤ 100%
+- Ensure mlp_multiplier + qkv_multiplier + proj_multiplier + head_multiplier ≤ 100%
 - Verify expected MAC breakdown sums to target: {target_macs:.3f}G +{macs_overshoot_tolerance_pct:.1f}%/-{macs_undershoot_tolerance_pct:.1f}%
 - Focus on MAC budget achievement, not parameter reduction percentages
 """

@@ -162,3 +162,149 @@ class SparseGPT:
             self.out1 = None
         self.H = None
         torch.cuda.empty_cache()
+
+
+def find_layers(module, layers=[nn.Linear], name=''):
+    """
+    Recursively find the layers of a certain type in a module.
+
+    Args:
+        module (nn.Module): PyTorch module.
+        layers (list): List of layer types to find.
+        name (str): Name of the module.
+
+    Returns:
+        dict: Dictionary of layers of the given type(s) within the module.
+    """
+    if isinstance(module, tuple(layers)):
+        return {name: module}
+    res = {}
+    for name1, child in module.named_children():
+        res.update(find_layers(
+            child, layers=layers, name=name + '.' + name1 if name != '' else name1
+        ))
+    return res
+
+
+@torch.no_grad()
+def prune_sparsegpt(model, loader, nsamples=128, batch_size=1, device=torch.device("cuda:0"),
+                    prune_n=0, prune_m=0, sparsity_ratio=0.0, disable_update=False, groups=None):
+    # Initialize input caches (unchanged)
+    model.to(device)
+    layers = model.blocks
+    dtype = next(iter(model.parameters())).dtype
+    inps = torch.zeros(
+        (nsamples, model.num_prefix_tokens + model.patch_embed.num_patches, model.embed_dim), dtype=dtype, device=device
+    )
+    cache = {'i': 0}
+
+    class Catcher(nn.Module):
+        def __init__(self, module):
+            super().__init__()
+            self.module = module
+
+        def forward(self, inp, **kwargs):
+            inps[cache['i']] = inp
+            cache['i'] += 1
+            raise ValueError
+
+    layers[0] = Catcher(layers[0])
+    for batch in loader:
+        if cache['i'] == nsamples: break
+        try:
+            model(batch[0].to(device))
+        except ValueError:
+            pass
+    layers[0] = layers[0].module
+    torch.cuda.empty_cache()
+
+    outs = torch.zeros_like(inps)
+    print('Ready.')
+
+    for i in range(len(layers)):
+        layer = layers[i]
+        inps, outs = inps.to(device), outs.to(device)
+
+        subset = find_layers(layer)
+
+        gpts = {}
+        for name in subset:
+            gpts[name] = SparseGPT(subset[name])
+
+        def add_batch(name):
+            def tmp(_, inp, out):
+                gpts[name].add_batch(inp[0].data, out.data)
+
+            return tmp
+
+        handles = []
+        for name in gpts:
+            handles.append(subset[name].register_forward_hook(add_batch(name)))
+
+        for j in range(nsamples):
+            outs[j] = layer(inps[j].unsqueeze(0))[0]
+        for h in handles:
+            h.remove()
+
+        for name in gpts:
+            print(i, name)
+            print('Pruning ...')
+
+            # Get layer-specific N:M pattern
+            layer_n, layer_m = get_layer_sparsity(name, groups, prune_n, prune_m)
+
+            gpts[name].fasterprune(sparsity_ratio, prunen=layer_n, prunem=layer_m,
+                                   percdamp=0.01, blocksize=128, disable_update=disable_update)
+            gpts[name].free()
+
+        for j in range(nsamples):
+            outs[j] = layer(inps[j].unsqueeze(0))[0]
+
+        layers[i] = layer
+        torch.cuda.empty_cache()
+
+        inps, outs = outs, inps
+
+    torch.cuda.empty_cache()
+
+
+def get_layer_sparsity(layer_name, groups, default_n, default_m):
+    """Get N:M pattern for a specific layer based on groups"""
+    if groups is None:
+        return default_n, default_m
+
+        # Extract layer type from name
+    name_parts = layer_name.split('.')
+
+    # Check if this is an attention layer
+    if 'attn' in name_parts:
+        if 'qkv' in name_parts or 'proj' in name_parts:
+            if 'attention_blocks' in groups:
+                ratio = groups['attention_blocks'].pruning_ratio
+                return ratio_to_nm(ratio)
+
+                # Check if this is an MLP layer
+    elif 'mlp' in name_parts:
+        if 'fc1' in name_parts or 'fc2' in name_parts:
+            if 'mlp_blocks' in groups:
+                ratio = groups['mlp_blocks'].pruning_ratio
+                return ratio_to_nm(ratio)
+
+                # Default
+    return default_n, default_m
+
+
+def ratio_to_nm(pruning_ratio):
+    """Convert pruning ratio to N:M pattern"""
+    density = 1 - pruning_ratio
+
+    if density >= 0.8:  # ≤20% pruning
+        return 4, 5  # 80% dense
+    elif density >= 0.75:  # ~25% pruning
+        return 3, 4  # 75% dense
+    elif density >= 0.5:  # ~50% pruning
+        return 2, 4  # 50% dense
+    elif density >= 0.4:  # ~60% pruning
+        return 2, 5  # 40% dense
+    else:  # High pruning
+        return 1, 4  # 25% dense
