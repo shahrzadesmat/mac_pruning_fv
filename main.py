@@ -115,16 +115,25 @@ if __name__ == "__main__":
         'timestamp': datetime.now().isoformat(),
     }
 
-    os.environ["WANDB_SERVICE_WAIT"] = "360"  # Increase timeout to 2 minutes
+    os.environ["WANDB_SERVICE_WAIT"] = "120"  # Increase timeout to 6 minutes
     os.environ["WANDB_START_METHOD"] = "thread"  # Use thread instead of fork
+    # Use local tmpdir for wandb service files to avoid NFS latency issues
+    local_tmp = os.path.join(os.environ.get("TMPDIR", "/tmp"), f"wandb_{os.getpid()}")
+    os.makedirs(local_tmp, exist_ok=True)
+    os.environ["WANDB_DATA_DIR"] = local_tmp
+    os.environ["WANDB_DIR"] = local_tmp
 
     # Initialize WandB
-    wandb.init(
-        project=args.wandb_project,
-        name=args.wandb_name,
-        config=wandb_config,
-        mode=args.wandb_mode
-    )
+    try:
+        wandb.init(
+            project=args.wandb_project,
+            name=args.wandb_name,
+            config=wandb_config,
+            mode=args.wandb_mode
+        )
+    except Exception as e:
+        print(f"[WandB] Failed to initialize: {e}. Disabling WandB.", flush=True)
+        wandb.init(mode="disabled")
 
     # print("[WandB] WandB initialized successfully.", flush=True)
 

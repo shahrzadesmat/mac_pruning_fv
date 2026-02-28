@@ -283,37 +283,49 @@ class DeepSeekLLM:
                 "max_tokens": 1000
             }
 
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    self.api_url,
-                    headers=self.headers,
-                    json=payload,
-                    timeout=90
-                ) as resp:
-                    print(f"\nOpenRouter Response Status: {resp.status}")
-                    response_text = await resp.text()
+            max_retries = 5
+            retryable_statuses = {429, 502, 503, 529}
 
-                    if resp.status != 200:
+            for attempt in range(max_retries):
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                        self.api_url,
+                        headers=self.headers,
+                        json=payload,
+                        timeout=aiohttp.ClientTimeout(total=90)
+                    ) as resp:
+                        print(f"\nOpenRouter Response Status: {resp.status}")
+                        response_text = await resp.text()
+
+                        if resp.status in retryable_statuses:
+                            wait = min(2 ** attempt * 2, 60)  # 2s, 4s, 8s, 16s, 32s
+                            print(f"[⏳] Rate limited (HTTP {resp.status}). Retrying in {wait}s (attempt {attempt + 1}/{max_retries})...")
+                            await asyncio.sleep(wait)
+                            continue
+
+                        if resp.status != 200:
+                            try:
+                                error_data = json.loads(response_text)
+                                raise Exception(error_data.get("error", {}).get("message", "Unknown error"))
+                            except json.JSONDecodeError:
+                                raise Exception(f"Non-JSON error response: {response_text}")
+
                         try:
-                            error_data = json.loads(response_text)
-                            raise Exception(error_data.get("error", {}).get("message", "Unknown error"))
-                        except json.JSONDecodeError:
-                            raise Exception(f"Non-JSON error response: {response_text}")
+                            response_data = json.loads(response_text)
+                            content = response_data["choices"][0]["message"]["content"]
+                        except Exception as e:
+                            raise Exception(f"Failed to parse LLM response: {str(e)}")
 
-                    try:
-                        response_data = json.loads(response_text)
-                        content = response_data["choices"][0]["message"]["content"]
-                    except Exception as e:
-                        raise Exception(f"Failed to parse LLM response: {str(e)}")
+                        if self.output_format == "json":
+                            try:
+                                parsed = json.loads(content)
+                                return DeepSeekResponse(content=parsed)
+                            except json.JSONDecodeError:
+                                raise ValueError(f"Expected JSON, but got:\n{content}")
 
-                    if self.output_format == "json":
-                        try:
-                            parsed = json.loads(content)
-                            return DeepSeekResponse(content=parsed)
-                        except json.JSONDecodeError:
-                            raise ValueError(f"Expected JSON, but got:\n{content}")
+                        return DeepSeekResponse(content=content)
 
-                    return DeepSeekResponse(content=content)
+            raise Exception(f"OpenRouter request failed after {max_retries} retries (last status: 429/rate-limited)")
 
         elif self.provider == "groq":
             loop = asyncio.get_event_loop()

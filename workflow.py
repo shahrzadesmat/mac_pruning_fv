@@ -553,7 +553,7 @@ def create_pruning_workflow():
                 print(f"[📊] Setting final {dataset} pruning results based on best MAC attempt (achieved: {best_achieved_macs:.3f}G)")
                 if 'prune' not in result:
                     result['prune'] = {}
-                
+
                 result['prune']['pruning_results'] = {
                     'success': True,
                     'achieved_macs': best_achieved_macs,
@@ -561,6 +561,10 @@ def create_pruning_workflow():
                     'mac_error_pct': best_mac_error,
                     'dataset': dataset
                 }
+
+                # Set final_best_model so route_after_master can find it
+                state['final_best_model'] = best_entry
+                result['final_best_model'] = best_entry
 
         GLOBAL_STATE.update(result)
         return result

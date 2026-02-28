@@ -35,7 +35,7 @@ class MaskLLMRunner:
             return
         if not os.path.exists(path):
             raise FileNotFoundError(f"sparse checkpoint not found: {path}")
-        ck = torch.load(path, map_location="cpu")
+        ck = torch.load(path, map_location="cpu", weights_only=False)
         # notebook saved either raw state_dict or dict with 'model'
         state = ck.get("model", ck) if isinstance(ck, dict) else ck
         model.load_state_dict(state, strict=False)

@@ -133,7 +133,10 @@ class AnalysisAgent:
     @time_it_async("3. Enhanced Analysis Agent")
     async def analyze(self, state: PruningState) -> Dict:
         """CLEANED: Enhanced analysis with LLM-based approach only (MACs-aware)"""
-        
+
+        # Store pruning method so sub-functions can check it
+        self._pruning_method = state.get('pruning_method', 'structural')
+
         dataset = state.get('dataset', 'cifar10')
         model_name = state.get('model_name', 'unknown')
 
@@ -181,6 +184,11 @@ class AnalysisAgent:
         validated_strategy = llm_response.copy()
         validated_strategy['safety_validated'] = True
         validated_strategy['corrections_applied'] = []
+
+        # MaskLLM uses learned masks, not importance criteria like taylor/l1norm
+        if state.get('pruning_method') == 'maskllm':
+            validated_strategy['importance_criterion'] = 'maskllm'
+
         print(f"[✅] Using LLM strategy directly - no safety overrides")
 
         # MACs-first: ignore ratio as a control parameter; rely on MAC budget downstream
@@ -206,17 +214,25 @@ class AnalysisAgent:
         if baseline_macs_out is not None:
             extra_state['baseline_macs'] = float(baseline_macs_out)
 
+        # MaskLLM uses learned masks, not importance criteria like taylor/l1norm
+        pruning_method = state.get('pruning_method', 'structural')
+        if pruning_method == 'maskllm':
+            importance_criterion = 'maskllm'
+        else:
+            importance_criterion = validated_strategy.get('importance_criterion', 'taylor')
+
         return {
             **extra_state,
             'analysis_results': {
                 'strategy_dict': validated_strategy,
-                'importance_criterion': validated_strategy.get('importance_criterion', 'taylor'),
+                'importance_criterion': importance_criterion,
                 'channel_pruning_ratio': None if (target_macs is not None and baseline_macs is not None)
                                         else validated_strategy.get('channel_pruning_ratio'),
                 'pruning_ratio': None if (target_macs is not None and baseline_macs is not None)
                                 else validated_strategy.get('pruning_ratio', target_ratio),
                 'round_to_value': validated_strategy.get('round_to'),
                 'isomorphic_group_ratios': validated_strategy.get('isomorphic_group_ratios', {}),
+                'maskllm_nm_patterns': validated_strategy.get('maskllm_nm_patterns'),
                 'safety_validated': True,
                 'dataset': dataset,
                 'architecture_type': 'cnn' if is_cnn else 'vit',
@@ -1356,6 +1372,38 @@ class AnalysisAgent:
         NEW METHOD: ViT analysis with historical learning (MACs-first)
         REASON: Learn from previous attempts and aim for a specific MACs budget
         """
+        # MaskLLM: use the full format_analysis_prompt flow (which includes profiling
+        # agent text, master agent directives, and history) but ask for N:M patterns
+        # via the MaskLLM branch in get_vit_analysis_content.
+        if self._pruning_method == 'maskllm':
+            print(f"[🔧] MaskLLM: using full analysis prompt (profiling + master + history)")
+            prompt_text = format_analysis_prompt(state)
+            response = await self.llm.ainvoke([
+                SystemMessage(content=(
+                    "You are a ViT MaskLLM sparsity expert. "
+                    "Pick N:M structured sparsity patterns to hit a specific MAC target. "
+                    "Output only valid JSON with maskllm_nm_patterns."
+                )),
+                HumanMessage(content=prompt_text)
+            ])
+            strategy_dict = parse_llm_json_response(response.content)
+            if not strategy_dict:
+                raise ValueError("MaskLLM analysis: LLM returned unparseable response")
+            if 'maskllm_nm_patterns' not in strategy_dict:
+                raise ValueError(
+                    "MaskLLM analysis: LLM did not return maskllm_nm_patterns. "
+                    f"Got keys: {list(strategy_dict.keys())}"
+                )
+            nm = strategy_dict['maskllm_nm_patterns']
+            attn = nm.get('attn_nm', {})
+            mlp  = nm.get('mlp_nm', {})
+            print(f"[🤖] MaskLLM N:M selected via full analysis flow:")
+            print(f"   attn_nm: {attn.get('N')}:{attn.get('M')} ({100*attn.get('N',0)/max(attn.get('M',1),1):.1f}% dense)")
+            print(f"   mlp_nm:  {mlp.get('N')}:{mlp.get('M')} ({100*mlp.get('N',0)/max(mlp.get('M',1),1):.1f}% dense)")
+            print(f"   Estimated MACs: {strategy_dict.get('estimated_macs_g', 'N/A')}G")
+            strategy_dict['importance_criterion'] = 'maskllm'
+            return strategy_dict
+
         dataset = state.get('dataset', 'cifar10')
         target_ratio = state.get('target_pruning_ratio')
 
@@ -1461,9 +1509,10 @@ class AnalysisAgent:
             elif history:
                 # MACs-first, history-driven
                 print(f"[📚] Using historical learning from {len(history)} previous attempts (MACs-first)")
-                strategy = await self._llm_calculate_vit_strategy_baseline(
+                strategy = await self._llm_calculate_vit_strategy_with_history(
                     target_ratio,
                     model_name,
+                    history,
                     dataset,
                     baseline_macs=baseline_macs,
                     target_macs=target_macs,
@@ -1516,6 +1565,10 @@ class AnalysisAgent:
                 "macs_undershoot_tolerance_pct": macs_undershoot_tolerance_pct,
             })
 
+            # MaskLLM uses learned masks, not importance criteria like taylor/l1norm
+            if state.get('pruning_method') == 'maskllm':
+                strategy['importance_criterion'] = 'maskllm'
+
             print(f"[✅] ViT strategy complete: {approach}")
             return strategy
 
@@ -1540,7 +1593,6 @@ class AnalysisAgent:
         """
         Use LLM to determine ViT isomorphic ratios based on historical results.
         """
-
         # Format history (existing helper; assumed to include MACs after your previous changes)
         history_text = self._format_vit_history_for_llm_learning(
             history, 
@@ -1679,6 +1731,10 @@ class AnalysisAgent:
                 # Optional validation hook (kept as-is)
                 strategy_dict = self._validate_learning_reasoning(strategy_dict, history, target_ratio)
 
+                # Override importance for MaskLLM
+                if getattr(self, '_pruning_method', 'structural') == 'maskllm':
+                    strategy_dict['importance_criterion'] = 'maskllm'
+
                 ratios = strategy_dict['isomorphic_group_ratios']
                 mlp_mult = ratios.get('mlp_multiplier', 0)
                 qkv_mult = ratios.get('qkv_multiplier', 0)
@@ -1790,10 +1846,37 @@ class AnalysisAgent:
 
     def _validate_learning_reasoning(self, strategy_dict, history, target_ratio):
         """Simple validation - basic safety net for obvious directional errors"""
-        
+
         if not history or len(history) < 2:
             return strategy_dict
-        
+
+        # MaskLLM uses direct N:M patterns — multiplier-direction checks don't apply.
+        # Just verify N:M density direction matches MAC error direction.
+        if getattr(self, '_pruning_method', 'structural') == 'maskllm':
+            last_entry = history[-1]
+            last_strategy = last_entry.get('strategy_used', {})
+            achieved_macs = last_entry.get('achieved_macs')
+            target_macs = last_entry.get('target_macs')
+            current_nm = strategy_dict.get('maskllm_nm_patterns', {})
+            last_nm = last_strategy.get('maskllm_nm_patterns', {})
+            if achieved_macs and target_macs and current_nm and last_nm:
+                mac_error_pct = (float(achieved_macs) - float(target_macs)) / float(target_macs) * 100
+                cur_mlp = current_nm.get('mlp_nm', {})
+                lst_mlp = last_nm.get('mlp_nm', {})
+                if cur_mlp and lst_mlp:
+                    cur_density = cur_mlp.get('N', 1) / max(cur_mlp.get('M', 1), 1)
+                    lst_density = lst_mlp.get('N', 1) / max(lst_mlp.get('M', 1), 1)
+                    density_increased = cur_density > lst_density
+                    # If MACs too high (over budget): need sparser (lower density)
+                    # If MACs too low (under budget): need denser (higher density)
+                    if mac_error_pct > 5.0 and density_increased:
+                        print(f"[⚠️] N:M validation: MACs too high but MLP got denser — pattern may be wrong")
+                    elif mac_error_pct < -5.0 and not density_increased:
+                        print(f"[⚠️] N:M validation: MACs too low but MLP got sparser — pattern may be wrong")
+                    else:
+                        print(f"[✅] N:M validation: density direction matches MAC error direction")
+            return strategy_dict
+
         print(f"[🔍] VALIDATING LEARNING DIRECTION:")
         
         # Get current and previous multipliers
@@ -2484,11 +2567,43 @@ class AnalysisAgent:
         """
         Format ViT history for LLM learning - focus on multiplier relationships
         REASON: LLM needs structured data to learn patterns from previous attempts
+
+        For MaskLLM, shows N:M patterns instead of multipliers.
         """
-        
+
         if not history:
             return "No historical ViT data available for learning."
-        
+
+        # MaskLLM: delegate to N:M-aware formatter
+        if getattr(self, '_pruning_method', 'structural') == 'maskllm':
+            lines = [f"LEARNING FROM {len(history)} PREVIOUS MASKLLM ATTEMPTS (N:M patterns):"]
+            lines.append("=" * 60)
+            for i, entry in enumerate(history, 1):
+                strategy = entry.get('strategy_used', {})
+                nm = strategy.get('maskllm_nm_patterns', {})
+                attn = nm.get('attn_nm', {})
+                mlp  = nm.get('mlp_nm', {})
+                attn_str = (f"{attn.get('N')}:{attn.get('M')} "
+                            f"({100*attn.get('N',0)/max(attn.get('M',1),1):.0f}%)") if attn else "unknown"
+                mlp_str  = (f"{mlp.get('N')}:{mlp.get('M')} "
+                            f"({100*mlp.get('N',0)/max(mlp.get('M',1),1):.0f}%)")  if mlp  else "unknown"
+                achieved_macs = entry.get('achieved_macs') or entry.get('final_macs')
+                target_ops    = entry.get('target_macs')
+                if achieved_macs and target_ops:
+                    macs_err = (float(achieved_macs) - float(target_ops)) / float(target_ops) * 100
+                    status = (f"SUCCESS ({macs_err:+.1f}%)" if -macs_undershoot_tolerance_pct <= macs_err <= macs_overshoot_tolerance_pct
+                              else f"MISS ({macs_err:+.1f}%)")
+                    macs_display = f"{float(achieved_macs)/1e9:.3f}G"
+                else:
+                    status = "no MACs"
+                    macs_display = "N/A"
+                lines.append(f"Attempt {i}: attn={attn_str}, mlp={mlp_str} -> {macs_display} [{status}]")
+                acc = entry.get('zero_shot_accuracy', entry.get('zero_shot_top1_accuracy'))
+                if acc is not None:
+                    lines.append(f"  zero-shot accuracy: {acc:.2f}%")
+            return "\n".join(lines)
+
+        # Structural pruning (original path below)
         # Asymmetric tolerance (percent MACs error): acceptable range is [-undershoot, +overshoot]
         lower_tol_pct = float(macs_undershoot_tolerance_pct)
         upper_tol_pct = float(macs_overshoot_tolerance_pct)
@@ -2496,24 +2611,24 @@ class AnalysisAgent:
         formatted = []
         formatted.append(f"LEARNING FROM {len(history)} PREVIOUS VIT ATTEMPTS:")
         formatted.append("=" * 60)
-        
+
         # Track patterns for summary
         overshoots = 0
         undershoots = 0
         catastrophic_failures = 0
         successful_attempts = 0
         within_tolerance_count = 0
-        
+
         for i, entry in enumerate(history, 1):
             strategy = entry.get('strategy_used', {})
             ratios = strategy.get('isomorphic_group_ratios', strategy)  # Fallback if nested
-            
+
             # Extract values safely FIRST
             mlp_mult = ratios.get('mlp_multiplier')
             qkv_mult = ratios.get('qkv_multiplier')
             achieved_ratio = entry.get('achieved_ratio', 0)
             target_was = entry.get('target_ratio', target_ratio)
-            
+
             # THEN convert to safe strings for formatting
             mlp_mult_str = self.safe_format_float(mlp_mult, 3, "unknown")
             qkv_mult_str = self.safe_format_float(qkv_mult, 3, "unknown")
@@ -2730,6 +2845,10 @@ class AnalysisAgent:
             strategy_dict = parse_llm_json_response(response.content)
 
             if strategy_dict and 'isomorphic_group_ratios' in strategy_dict:
+                # Override importance for MaskLLM
+                if getattr(self, '_pruning_method', 'structural') == 'maskllm':
+                    strategy_dict['importance_criterion'] = 'maskllm'
+
                 ratios = strategy_dict['isomorphic_group_ratios']
                 mlp_mult = ratios.get('mlp_multiplier', 0)
                 qkv_mult = ratios.get('qkv_multiplier', 0)
@@ -2751,16 +2870,17 @@ class AnalysisAgent:
             print(f"[🔄] Using hardcoded conservative fallback (MACs-first mindset)")
 
             # Conservative fallback when LLM completely fails
+            is_maskllm = getattr(self, '_pruning_method', 'structural') == 'maskllm'
             if dataset.lower() == 'imagenet':
                 # Protect attention on ImageNet in baseline fallback
                 fallback_mlp = min(1.0, (target_ratio * 0.8) / 0.6)  # conservative tilt toward MLP
                 fallback_qkv = 0.0                                   # no attention pruning in baseline fallback
-                fallback_importance = "taylor"
+                fallback_importance = "maskllm" if is_maskllm else "taylor"
                 fallback_round_to = 2
             else:
                 fallback_mlp = min(1.5, target_ratio / 0.6)  # moderate for CIFAR-10
                 fallback_qkv = min(1.0, target_ratio / 0.4)  # still cautious with attention
-                fallback_importance = "taylor"
+                fallback_importance = "maskllm" if is_maskllm else "taylor"
                 fallback_round_to = 1
 
             return {
@@ -2782,7 +2902,7 @@ class AnalysisAgent:
                     "head_multiplier": 0.0
                 },
                 "fallback_used": True
-            }      
+            }
 
     def _create_emergency_vit_fallback_strategy(self, target_ratio, model_name, dataset, error_msg, state, macs_overshoot_tolerance_pct=1.0, macs_undershoot_tolerance_pct=5.0):
         """
@@ -2792,17 +2912,20 @@ class AnalysisAgent:
         print(f"[🚨] Emergency ViT fallback for {model_name} on {dataset} (MACs-first)")
 
         # Ultra-conservative approach based on dataset (favor accuracy; keep MACs near/under budget)
+        # MaskLLM uses learned masks, not importance criteria
+        is_maskllm = state.get('pruning_method') == 'maskllm'
+
         if dataset.lower() == 'imagenet':
             # For ImageNet, protect attention completely in emergency; keep MLP modest
             emergency_mlp = min(0.8, target_ratio * 0.5)  # very conservative MLP actual ≈ 0.5×target_ratio
             emergency_qkv = 0.0                           # skip attention pruning in emergency
-            emergency_importance = "taylor"
+            emergency_importance = "maskllm" if is_maskllm else "taylor"
             emergency_round_to = 2
         else:  # CIFAR-10
             # More permissive but still conservative
             emergency_mlp = min(1.2, target_ratio * 0.8)
             emergency_qkv = min(0.6, target_ratio * 0.4)
-            emergency_importance = "taylor"
+            emergency_importance = "maskllm" if is_maskllm else "taylor"
             emergency_round_to = 2
 
         print(f"[🔧] Emergency ViT fallback: mlp={emergency_mlp:.3f}, qkv={emergency_qkv:.3f}, "

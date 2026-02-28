@@ -1,3 +1,4 @@
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -73,9 +74,9 @@ class MaskedLinear(nn.Linear):
         self.divisible_size = (total_elements // M) * M  
         self.num_blocks = self.divisible_size // M  
         
-        self.gate = nn.Parameter(torch.empty(  
-                self.num_blocks, self._mask_options.size(0),   
-                device=self.weight.device, dtype=self.weight.dtype), requires_grad=True) 
+        self.gate = nn.Parameter(torch.randn(
+                self.num_blocks, self._mask_options.size(0),
+                device=self.weight.device, dtype=self.weight.dtype) * gate_init_std, requires_grad=True)
         self.tau = 1
         self.scaling = scaling
         self.hard = hard
@@ -89,21 +90,6 @@ class MaskedLinear(nn.Linear):
 
     def sparse_weight_reg(self):
         return self._sparse_weight_reg
-
-    # def forward(self, x):
-    #     if self.training:
-    #         self.mask_oudated = True # reset selected since we will update it
-    #         soft_index = F.gumbel_softmax(self.gate * self.scaling, tau=self.tau, hard=self.hard, dim=1) # (Blocks x Candidate Masks)
-    #         soft_mask = soft_index @ self._mask_options.to(x.device) # (Blocks x Candidate Masks) @ (Candidate Masks x M) = (Blocks x M)
-    #         soft_mask = soft_mask.view(self.out_features, self.in_features)
-    #         self._sparse_weight_reg = (self.weight.detach() * soft_mask).pow(2).sum()
-    #         return F.linear(x, soft_mask * self.weight, self.bias)
-    #     else:
-    #         if self.mask_oudated: # for inference, we only compute the winner masks once for efficiency
-    #             self._mask_options = self._mask_options.to(x.device)
-    #             self.mask = self._mask_options[torch.argmax(self.gate, dim=1)].view(self.out_features, self.in_features)
-    #             self.mask_oudated = False
-    #         return F.linear(x, self.mask * self.weight, self.bias)
 
     def forward(self, x):  
         if self.training:  
@@ -131,29 +117,6 @@ class MaskedLinear(nn.Linear):
                 self.mask = full_mask.view(self.out_features, self.in_features)  
                 self.mask_oudated = False  
             return F.linear(x, self.mask * self.weight, self.bias)
-
-    # def load_mask_prior(self, prior_strength=3):
-    #     with torch.no_grad():
-    #         sparsity = (self.mask==0).sum().item() / self.mask.numel()
-    #         # prior will be the inner product the different candidates to the prior mask
-    #         priors = (self._mask_options.unsqueeze(0) * self.mask.view(-1, 1, 4)).sum(dim=2) # (1, Candidate Masks, M) * (Blocks, 1, M) => Blocks x Candidate Masks
-    #         self.gate.data += (priors-self.N//2) * self.gate.std() * prior_strength
-
-    #         if torch.distributed.get_rank() == 0:
-    #             print(f"initializing with prior (strength={prior_strength}), Prior Sparsity: {sparsity}")
-    #             print(f"mean: {self.gate.mean().item()}, std: {self.gate.std().item()}, max: {self.gate.max().item()}, min: {self.gate.min().item()}")
-
-    # def load_mask_prior(self, prior_strength=3):  
-    #     with torch.no_grad():  
-    #         sparsity = (self.mask==0).sum().item() / self.mask.numel()  
-    #         # Only process divisible portion for prior  
-    #         prior_mask_flat = self.mask.view(-1)[:self.divisible_size].view(-1, self.M)  
-    #         priors = (self._mask_options.unsqueeze(0) * prior_mask_flat).sum(dim=2)  
-    #         self.gate.data += (priors-self.N//2) * self.gate.std() * prior_strength  
-  
-    #         if torch.distributed.get_rank() == 0:  
-    #             print(f"initializing with prior (strength={prior_strength}), Prior Sparsity: {sparsity}")  
-    #             print(f"mean: {self.gate.mean().item()}, std: {self.gate.std().item()}, max: {self.gate.max().item()}, min: {self.gate.min().item()}")
 
     def load_mask_prior(self, prior_strength=3):  
         with torch.no_grad():  

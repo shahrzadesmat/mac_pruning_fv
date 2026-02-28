@@ -43,19 +43,20 @@ class FineTuningAgent:
         std = (0.2023, 0.1994, 0.2010)
 
         # Training transform with data augmentation
+        # Resize FIRST, then augment, then normalize
         train_transform = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
+            transforms.Resize((224, 224), antialias=True),
+            transforms.RandomCrop(224, padding=28),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean, std),
-            transforms.Resize((224, 224), antialias=True)
         ])
 
         # Validation/test transform without augmentation
         val_transform = transforms.Compose([
+            transforms.Resize((224, 224), antialias=True),
             transforms.ToTensor(),
             transforms.Normalize(mean, std),
-            transforms.Resize((224, 224), antialias=True)
         ])
 
         # Load training dataset
@@ -186,9 +187,9 @@ class FineTuningAgent:
         else:  # CIFAR-10
             if is_vit_model:
                 return {
-                    'num_epochs': 5,
-                    'learning_rate': 0.005,
-                    'weight_decay': 0.05,
+                    'num_epochs': 30,
+                    'learning_rate': 0.0005,
+                    'weight_decay': 0.01,
                     'optimizer': 'adamw',
                     'batch_size_factor': 1.0
                 }
@@ -302,28 +303,24 @@ class FineTuningAgent:
             params = self._get_dataset_specific_params(dataset, is_vit_model)
             num_epochs = params['num_epochs']  # Respect user setting (you set this to 1)
             
-            # SIMPLE FIX: Use very conservative LR for pruned models
-            if dataset.lower() == 'imagenet' and is_vit_model:
-                if achieved_ratio > 0.15:  # Heavily pruned
-                    base_lr = 0.00005      # Very conservative
-                else:
-                    base_lr = 0.0001       # Still conservative
-            else:  # CIFAR-10 or CNN
-                base_lr = 0.001 if achieved_ratio < 0.1 else 0.0005
+            # Use dataset-specific learning rate from params
+            base_lr = params['learning_rate']
             
             print(f"[🔧] Using LR {base_lr} for {achieved_ratio:.1%} pruned model")
             # print(f"[⚙️] User set epochs: {num_epochs}")
             
             # FIX: Setup data loaders EARLY
-            train_loader, val_loader = self._setup_dataset_loaders(dataset, data_path, 64)
+            batch_size = 128 if is_vit_model else 64
+            train_loader, val_loader = self._setup_dataset_loaders(dataset, data_path, batch_size)
             # print(f"[📊] Setup data loaders: {len(train_loader)} train, {len(val_loader)} val")
             
-            # Setup optimizer
+            # Setup optimizer using dataset-specific params
+            weight_decay = params['weight_decay']
             if is_vit_model:
                 optimizer = torch.optim.AdamW(
                     model.parameters(),
                     lr=base_lr,
-                    weight_decay=0.02,
+                    weight_decay=weight_decay,
                     betas=(0.9, 0.999)
                 )
                 print(f"[🧮] Using AdamW optimizer for ViT")
@@ -332,12 +329,26 @@ class FineTuningAgent:
                     model.parameters(),
                     lr=base_lr,
                     momentum=0.9,
-                    weight_decay=1e-4
+                    weight_decay=weight_decay
                 )
                 print(f"[🧮] Using SGD optimizer for CNN")
             
-            # SIMPLE SCHEDULER: Just constant LR (no fancy scheduling)
-            scheduler = torch.optim.lr_scheduler.ConstantLR(optimizer, factor=1.0)
+            # Cosine annealing with linear warmup
+            warmup_epochs = min(2, num_epochs // 4) if num_epochs > 2 else 0
+            if warmup_epochs > 0:
+                warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
+                    optimizer, start_factor=0.1, total_iters=warmup_epochs
+                )
+                cosine_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                    optimizer, T_max=num_epochs - warmup_epochs, eta_min=base_lr * 0.01
+                )
+                scheduler = torch.optim.lr_scheduler.SequentialLR(
+                    optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[warmup_epochs]
+                )
+            else:
+                scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                    optimizer, T_max=num_epochs, eta_min=base_lr * 0.01
+                )
             
             # Loss with light label smoothing
             criterion = nn.CrossEntropyLoss(label_smoothing=0.05).to(device)
@@ -345,7 +356,9 @@ class FineTuningAgent:
             # Track best model
             best_val_acc = 0.0
             best_model_state = None
-            
+            patience = 5
+            patience_counter = 0
+
             print(f"[🎯] Simple fine-tuning: {num_epochs} epochs, LR {base_lr}")
             
             # Training loop
@@ -397,17 +410,21 @@ class FineTuningAgent:
                     val_loss, val_acc, _ = val_result
                     print(f'[📊] Validation: Accuracy {val_acc:.2f}%')
                 
+                # Step the LR scheduler
+                scheduler.step()
+
                 # Save best model
                 if val_acc > best_val_acc:
                     best_val_acc = val_acc
                     best_model_state = copy.deepcopy(model.state_dict())
+                    patience_counter = 0
                     print(f'[✅] New best: {best_val_acc:.2f}%')
                 else:
-                    print(f'[📉] No improvement (best: {best_val_acc:.2f}%)')
-                
-                # EARLY STOPPING: Only if more than 1 epoch and accuracy degrades significantly
-                if num_epochs > 1 and epoch > 0 and val_acc < (best_val_acc - 2.0):  # 2% degradation tolerance
-                    print(f"[🛑] Early stopping - validation degrading")
+                    patience_counter += 1
+                    print(f'[📉] No improvement for {patience_counter}/{patience} epochs (best: {best_val_acc:.2f}%)')
+
+                if patience_counter >= patience:
+                    print(f"[🛑] Early stopping - no improvement for {patience} epochs")
                     break
             
             # Load best model

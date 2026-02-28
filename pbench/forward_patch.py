@@ -5,7 +5,7 @@ import torch.nn.functional as F
 def patch_timm_forward():
     
     @patch_to(timm.models.vision_transformer.Attention)
-    def forward(self, x):
+    def forward(self, x, attn_mask=None):
         """https://github.com/huggingface/pytorch-image-models/blob/054c763fcaa7d241564439ae05fbe919ed85e614/timm/models/vision_transformer.py#L79"""
         B, N, C = x.shape
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, self.head_dim).permute(2, 0, 3, 1, 4)
@@ -14,6 +14,7 @@ def patch_timm_forward():
         if self.fused_attn:
             x = F.scaled_dot_product_attention(
                 q, k, v,
+                attn_mask=attn_mask,
                 dropout_p=self.attn_drop.p,
             )
         else:

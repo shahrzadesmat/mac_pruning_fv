@@ -5,3 +5,4 @@ slurm*
 *__pycache__
 *.pyc
 wandb
+/data

@@ -2059,6 +2059,21 @@ class PruningAgent:
         if rationale:
             print(f"[💡] Rationale: {rationale}")
 
+        # Check for direct N:M patterns from agent (new MaskLLM-specific path)
+        maskllm_nm_patterns = analysis_results.get("maskllm_nm_patterns")
+        if maskllm_nm_patterns is None:
+            strategy_dict_lookup = analysis_results.get("strategy_dict", {})
+            maskllm_nm_patterns = strategy_dict_lookup.get("maskllm_nm_patterns")
+
+        attn_nm = None
+        mlp_nm  = None
+        if maskllm_nm_patterns:
+            attn_nm = maskllm_nm_patterns.get("attn_nm")
+            mlp_nm  = maskllm_nm_patterns.get("mlp_nm")
+            print(f"[🎯] Direct N:M patterns from agent: attn={attn_nm}, mlp={mlp_nm}")
+        else:
+            print(f"[🔧] No maskllm_nm_patterns in analysis_results — using ratio_to_nm fallback via groups")
+
         tolerance = 0.02  # Acceptable deviation from target MACs
         device = self.get_device()
         print(f"[💻] Using device: {device}")
@@ -2123,8 +2138,14 @@ class PruningAgent:
             )
 
             # Replace Linear -> MaskedLinearFrozen and run SparseGPT
-            replace_linear_with_(model, MaskedLinearFrozen, exclude=[model.head], groups=groups)
-            prune_sparsegpt(model, val_loader, nsamples=128, batch_size=1, device=device, groups=groups)
+            # attn_nm/mlp_nm override ratio_to_nm when provided by the agent directly
+            # Exclude ALL classifier heads (DeiT-distilled has both head and head_dist)
+            _phase1_exclude = [m for attr in ('head', 'head_dist') if hasattr(model, attr)
+                               for m in [getattr(model, attr)] if isinstance(m, nn.Linear)]
+            replace_linear_with_(model, MaskedLinearFrozen, exclude=_phase1_exclude,
+                                 groups=groups, attn_nm=attn_nm, mlp_nm=mlp_nm)
+            prune_sparsegpt(model, val_loader, nsamples=128, batch_size=batch_size,
+                            device=device, groups=groups, attn_nm=attn_nm, mlp_nm=mlp_nm)
 
             # Save SparseGPT state (weights + masks)
             sparsegpt_state_dict = model.state_dict()
@@ -2143,7 +2164,23 @@ class PruningAgent:
 
             # Create fresh model with MaskedLinear (learnable gates)
             maskllm_model = timm.create_model(model_name, pretrained=False, num_classes=num_classes)
-            replace_linear_with_(maskllm_model, MaskedLinear, exclude=[maskllm_model.get_classifier()], groups=groups)
+            _phase2_exclude = [m for attr in ('head', 'head_dist') if hasattr(maskllm_model, attr)
+                               for m in [getattr(maskllm_model, attr)] if isinstance(m, nn.Linear)]
+            replace_linear_with_(maskllm_model, MaskedLinear, exclude=_phase2_exclude,
+                                 groups=groups, attn_nm=attn_nm, mlp_nm=mlp_nm)
+
+            # Log MaskLLM model parameters (with gate params)
+            total_params = sum(p.numel() for p in maskllm_model.parameters())
+            gate_params = sum(p.numel() for n, p in maskllm_model.named_parameters() if '.gate' in n)
+            weight_params = total_params - gate_params
+            print(f"[📊] MaskLLM model (before training):")
+            print(f"  Total params:  {total_params:,}")
+            print(f"  Weight params: {weight_params:,}")
+            print(f"  Gate params:   {gate_params:,} ({100*gate_params/total_params:.2f}%)")
+            for name, module in maskllm_model.named_modules():
+                if isinstance(module, MaskedLinear):
+                    print(f"  {name}: N={module.N}, M={module.M}, C(M,N)={module._mask_options.size(0)}, "
+                          f"blocks={module.num_blocks:,}, gate_params={module.gate.numel():,}")
 
             # Load SparseGPT weights+masks (gate params will be missing -> initialized randomly)
             maskllm_model.load_state_dict(sparsegpt_state_dict, strict=False)
@@ -2175,7 +2212,7 @@ class PruningAgent:
                 'clip_grad': 2.0,
                 'smoothing': 0.1,
                 'amp': torch.cuda.is_available(),
-                'epochs': 10 if dataset.lower() != 'imagenet' else 5,
+                'epochs': 20 if dataset.lower() != 'imagenet' else 5,
             }
 
             # Setup optimizer and scheduler
@@ -2256,8 +2293,11 @@ class PruningAgent:
             # Create final model with MaskedLinearFrozen + learned masks
             final_model = timm.create_model(model_name, pretrained=False, num_classes=num_classes)
 
-            # We need to replace with the correct N:M per layer, so use groups
-            replace_linear_with_(final_model, MaskedLinearFrozen, exclude=[final_model.get_classifier()], groups=groups)
+            # We need to replace with the correct N:M per layer, so use groups + LLM-selected attn_nm/mlp_nm
+            _phase3_exclude = [m for attr in ('head', 'head_dist') if hasattr(final_model, attr)
+                               for m in [getattr(final_model, attr)] if isinstance(m, nn.Linear)]
+            replace_linear_with_(final_model, MaskedLinearFrozen, exclude=_phase3_exclude,
+                                 groups=groups, attn_nm=attn_nm, mlp_nm=mlp_nm)
 
             # Copy weights from MaskLLM-trained model and set learned masks
             maskllm_state = maskllm_model.state_dict()
@@ -2278,6 +2318,13 @@ class PruningAgent:
                 param.requires_grad = True
 
             final_model.to(device)
+
+            # Log frozen model parameters (no gate params)
+            frozen_total = sum(p.numel() for p in final_model.parameters())
+            print(f"[📊] Frozen model (after training):")
+            print(f"  Total params:  {frozen_total:,}")
+            print(f"  Gate params removed: {gate_params:,}")
+            print(f"  Param reduction: {100*gate_params/total_params:.2f}% fewer than MaskLLM model")
             print("[✅] Final model created with learned frozen masks")
 
             # Log final sparsity
@@ -2305,8 +2352,23 @@ class PruningAgent:
 
             # Compute MACs
             final_macs, _ = tp.utils.count_ops_and_params(final_model, example_inputs)
+
+            # Adjust MACs to account for N:M sparsity in MaskedLinearFrozen layers.
+            # tp.count_ops_and_params treats MaskedLinearFrozen as a dense nn.Linear,
+            # but only N/M of the weights are active, so we scale each layer's MACs by N/M.
+            effective_macs = float(final_macs)
+            for module in final_model.modules():
+                if isinstance(module, MaskedLinearFrozen):
+                    full_layer_macs = module.out_features * module.in_features
+                    sparse_layer_macs = full_layer_macs * (module.N / module.M)
+                    effective_macs += (sparse_layer_macs - full_layer_macs)
+            effective_macs = int(effective_macs)
+            print(f"[📊] MACs (dense): {base_macs/1e9:.3f}G -> {final_macs/1e9:.3f}G")
+            print(f"[📊] MACs (sparse, N:M adjusted): {base_macs/1e9:.3f}G -> {effective_macs/1e9:.3f}G")
+            final_macs = effective_macs
+
             macs_reduction = float((base_macs - final_macs) / base_macs)
-            print(f"[📊] MACs: {base_macs/1e9:.3f}G -> {final_macs/1e9:.3f}G (reduction: {macs_reduction*100:.1f}%)")
+            print(f"[📊] MACs reduction (sparse): {macs_reduction*100:.1f}%")
 
             state['target_macs'] = float(target_macs)
 
@@ -2333,6 +2395,7 @@ class PruningAgent:
                 'pruning_method': 'maskllm',
                 'nm_configs': nm_configs,
                 'isomorphic_group_ratios': isomorphic_group_ratios,
+                'maskllm_nm_patterns': maskllm_nm_patterns,
                 'job_id': os.environ.get('SLURM_JOB_ID', 'local'),
                 'timestamp': datetime.now().isoformat()
             }, checkpoint_path)
@@ -2382,12 +2445,14 @@ class PruningAgent:
             # Build history entry
             strategy_used = {
                 'pruning_method': 'maskllm',
+                'importance_criterion': 'maskllm',
                 'isomorphic_group_ratios': {
                     'qkv_multiplier': float(groups['attention_blocks'].pruning_ratio),
                     'mlp_multiplier': float(groups['mlp_blocks'].pruning_ratio),
                     'proj_multiplier': 0.0,
                     'head_multiplier': 0.0,
                 },
+                'maskllm_nm_patterns': maskllm_nm_patterns,
                 'maskllm_epochs': num_epochs,
                 'rationale': rationale if rationale else "MaskLLM N:M semi-structured sparsity",
             }

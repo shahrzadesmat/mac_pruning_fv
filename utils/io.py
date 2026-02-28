@@ -135,7 +135,7 @@ async def save_final_best_model(state):
     # 3‑A: Load from the stored checkpoint with multiple key attempts
     if pruned_checkpoint and os.path.exists(pruned_checkpoint):
         try:
-            ckpt = torch.load(pruned_checkpoint, map_location='cpu')
+            ckpt = torch.load(pruned_checkpoint, map_location='cpu', weights_only=False)
             # print(f"[DEBUG] Checkpoint keys: {list(ckpt.keys())}")
             
             # Try different possible keys where the model might be stored
@@ -226,7 +226,7 @@ async def save_final_best_model(state):
         'fine_tuned_accuracy': best_ft_acc,
         'zero_shot_accuracy': best_zs_acc,
         'accuracy_type': acc_label,
-        'pruning_method': 'isomorphic_dependency_aware',
+        'pruning_method': best_candidate.get('strategy_used', {}).get('pruning_method', 'isomorphic_dependency_aware'),
         'saved_formats': {
             'weights_only': weights_filename,
             'full_model': full_filename

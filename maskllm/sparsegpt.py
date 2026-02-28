@@ -188,7 +188,8 @@ def find_layers(module, layers=[nn.Linear], name=''):
 
 @torch.no_grad()
 def prune_sparsegpt(model, loader, nsamples=128, batch_size=1, device=torch.device("cuda:0"),
-                    prune_n=0, prune_m=0, sparsity_ratio=0.0, disable_update=False, groups=None):
+                    prune_n=0, prune_m=0, sparsity_ratio=0.0, disable_update=False, groups=None,
+                    attn_nm=None, mlp_nm=None):
     # Initialize input caches (unchanged)
     model.to(device)
     layers = model.blocks
@@ -204,13 +205,17 @@ def prune_sparsegpt(model, loader, nsamples=128, batch_size=1, device=torch.devi
             self.module = module
 
         def forward(self, inp, **kwargs):
-            inps[cache['i']] = inp
-            cache['i'] += 1
+            b = inp.shape[0]
+            for j in range(b):
+                if cache['i'] >= nsamples:
+                    break
+                inps[cache['i']] = inp[j]
+                cache['i'] += 1
             raise ValueError
 
     layers[0] = Catcher(layers[0])
     for batch in loader:
-        if cache['i'] == nsamples: break
+        if cache['i'] >= nsamples: break
         try:
             model(batch[0].to(device))
         except ValueError:
@@ -251,7 +256,8 @@ def prune_sparsegpt(model, loader, nsamples=128, batch_size=1, device=torch.devi
             print('Pruning ...')
 
             # Get layer-specific N:M pattern
-            layer_n, layer_m = get_layer_sparsity(name, groups, prune_n, prune_m)
+            layer_n, layer_m = get_layer_sparsity(name, groups, prune_n, prune_m,
+                                                   attn_nm=attn_nm, mlp_nm=mlp_nm)
 
             gpts[name].fasterprune(sparsity_ratio, prunen=layer_n, prunem=layer_m,
                                    percdamp=0.01, blocksize=128, disable_update=disable_update)
@@ -268,43 +274,124 @@ def prune_sparsegpt(model, loader, nsamples=128, batch_size=1, device=torch.devi
     torch.cuda.empty_cache()
 
 
-def get_layer_sparsity(layer_name, groups, default_n, default_m):
-    """Get N:M pattern for a specific layer based on groups"""
-    if groups is None:
-        return default_n, default_m
+def get_layer_sparsity(layer_name, groups, default_n, default_m,
+                       attn_nm=None, mlp_nm=None):
+    """Get N:M pattern for a specific layer based on groups or direct N:M patterns.
 
-        # Extract layer type from name
+    Direct N:M patterns (attn_nm/mlp_nm) take priority over group-based ratio_to_nm conversion.
+    """
     name_parts = layer_name.split('.')
 
     # Check if this is an attention layer
     if 'attn' in name_parts:
         if 'qkv' in name_parts or 'proj' in name_parts:
-            if 'attention_blocks' in groups:
+            if attn_nm is not None:
+                return attn_nm['N'], attn_nm['M']
+            if groups is not None and 'attention_blocks' in groups:
                 ratio = groups['attention_blocks'].pruning_ratio
                 return ratio_to_nm(ratio)
 
-                # Check if this is an MLP layer
+    # Check if this is an MLP layer
     elif 'mlp' in name_parts:
         if 'fc1' in name_parts or 'fc2' in name_parts:
-            if 'mlp_blocks' in groups:
+            if mlp_nm is not None:
+                return mlp_nm['N'], mlp_nm['M']
+            if groups is not None and 'mlp_blocks' in groups:
                 ratio = groups['mlp_blocks'].pruning_ratio
                 return ratio_to_nm(ratio)
 
-                # Default
+    # Default
     return default_n, default_m
 
 
 def ratio_to_nm(pruning_ratio):
-    """Convert pruning ratio to N:M pattern"""
+    """Convert pruning ratio to nearest N:M pattern using M in {5,6,7,8,9}.
+
+    Uses midpoint thresholds for nearest-neighbor matching.
+    27 density levels from M=5,6,7,8,9 combinations (sorted high to low):
+
+      Density   N:M   Threshold (midpoint with next lower level)
+      88.9%     8:9   >= 0.882
+      87.5%     7:8   >= 0.866
+      85.7%     6:7   >= 0.845
+      83.3%     5:6   >= 0.817
+      80.0%     4:5   >= 0.789
+      77.8%     7:9   >= 0.764
+      75.0%     6:8   >= 0.732
+      71.4%     5:7   >= 0.691
+      66.7%     4:6   >= 0.646
+      62.5%     5:8   >= 0.613
+      60.0%     3:5   >= 0.586
+      57.1%     4:7   >= 0.564
+      55.6%     5:9   >= 0.528
+      50.0%     4:8   >= 0.472
+      44.4%     4:9   >= 0.437
+      42.9%     3:7   >= 0.414
+      40.0%     2:5   >= 0.388
+      37.5%     3:8   >= 0.354
+      33.3%     2:6   >= 0.310
+      28.6%     2:7   >= 0.268
+      25.0%     2:8   >= 0.236
+      22.2%     2:9   >= 0.211
+      20.0%     1:5   >= 0.183
+      16.7%     1:6   >= 0.155
+      14.3%     1:7   >= 0.134
+      12.5%     1:8   >= 0.118
+      11.1%     1:9   < 0.118
+    """
     density = 1 - pruning_ratio
 
-    if density >= 0.8:  # ≤20% pruning
-        return 4, 5  # 80% dense
-    elif density >= 0.75:  # ~25% pruning
-        return 3, 4  # 75% dense
-    elif density >= 0.5:  # ~50% pruning
-        return 2, 4  # 50% dense
-    elif density >= 0.4:  # ~60% pruning
-        return 2, 5  # 40% dense
-    else:  # High pruning
-        return 1, 4  # 25% dense
+    if density >= 0.882:
+        return 8, 9   # 88.9% dense
+    elif density >= 0.866:
+        return 7, 8   # 87.5% dense
+    elif density >= 0.845:
+        return 6, 7   # 85.7% dense
+    elif density >= 0.817:
+        return 5, 6   # 83.3% dense
+    elif density >= 0.789:
+        return 4, 5   # 80.0% dense
+    elif density >= 0.764:
+        return 7, 9   # 77.8% dense
+    elif density >= 0.732:
+        return 6, 8   # 75.0% dense
+    elif density >= 0.691:
+        return 5, 7   # 71.4% dense
+    elif density >= 0.646:
+        return 4, 6   # 66.7% dense
+    elif density >= 0.613:
+        return 5, 8   # 62.5% dense
+    elif density >= 0.586:
+        return 3, 5   # 60.0% dense
+    elif density >= 0.564:
+        return 4, 7   # 57.1% dense
+    elif density >= 0.528:
+        return 5, 9   # 55.6% dense
+    elif density >= 0.472:
+        return 4, 8   # 50.0% dense
+    elif density >= 0.437:
+        return 4, 9   # 44.4% dense
+    elif density >= 0.414:
+        return 3, 7   # 42.9% dense
+    elif density >= 0.388:
+        return 2, 5   # 40.0% dense
+    elif density >= 0.354:
+        return 3, 8   # 37.5% dense
+    elif density >= 0.310:
+        return 2, 6   # 33.3% dense
+    elif density >= 0.268:
+        return 2, 7   # 28.6% dense
+    elif density >= 0.236:
+        return 2, 8   # 25.0% dense
+    elif density >= 0.211:
+        return 2, 9   # 22.2% dense
+    elif density >= 0.183:
+        return 1, 5   # 20.0% dense
+    elif density >= 0.155:
+        return 1, 6   # 16.7% dense
+    elif density >= 0.134:
+        return 1, 7   # 14.3% dense
+    elif density >= 0.118:
+        return 1, 8   # 12.5% dense
+    else:
+        return 1, 9   # 11.1% dense
