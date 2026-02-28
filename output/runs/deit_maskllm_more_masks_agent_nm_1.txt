@@ -1,0 +1,5160 @@
+✅ Created experiment directory: /work/hdd/bfxa/dshah13/expf_cl/deit_tiny_distilled_patch16_224.fb_in1k_cifar10_macs0p62g
+✅ Created job output directory: /work/hdd/bfxa/dshah13/expf_cl/deit_tiny_distilled_patch16_224.fb_in1k_cifar10_macs0p62g/job_16217111
+=========================================
+🚀 STARTING PRUNING EXPERIMENT
+=========================================
+Model: deit_tiny_distilled_patch16_224.fb_in1k
+MACS Target: 0.62
+Dataset: cifar10
+Job ID: 16217111
+Experiment Dir: /work/hdd/bfxa/dshah13/expf_cl/deit_tiny_distilled_patch16_224.fb_in1k_cifar10_macs0p62g
+Job Output Dir: /work/hdd/bfxa/dshah13/expf_cl/deit_tiny_distilled_patch16_224.fb_in1k_cifar10_macs0p62g/job_16217111
+Log File: /work/hdd/bfxa/dshah13/expf_cl/deit_tiny_distilled_patch16_224.fb_in1k_cifar10_macs0p62g/job_16217111/logs/pruning_workflow_16217111.txt
+Final models will be saved to: /work/hdd/bfxa/dshah13/expf_cl/deit_tiny_distilled_patch16_224.fb_in1k_cifar10_macs0p62g/job_16217111/models
+Intermediate checkpoints will be saved to: /work/hdd/bfxa/dshah13/expf_cl/deit_tiny_distilled_patch16_224.fb_in1k_cifar10_macs0p62g/job_16217111/checkpoints
+=========================================
+Starting ImageNet workflow...
+wandb: WARNING `start_method` is deprecated and will be removed in a future version of wandb. This setting is currently non-functional and safely ignored.
+Patched sqlite3 with pysqlite3
+[WandB] Failed to initialize: Failed to read port info after 30.0 seconds.. Disabling WandB.
+/work/hdd/bfxa/dshah13/mac_pruning_fv/.venv/lib/python3.12/site-packages/torchvision/datasets/cifar.py:83: VisibleDeprecationWarning: dtype(): align should be passed as Python or NumPy boolean but got `align=0`. Did you mean to pass a tuple to create a subarray type? (Deprecated NumPy 2.4)
+  entry = pickle.load(f, encoding="latin1")
+/work/hdd/bfxa/dshah13/mac_pruning_fv/.venv/lib/python3.12/site-packages/torch/utils/data/dataloader.py:424: UserWarning: This DataLoader will create 16 worker processes in total. Our suggested max number of worker in current system is 8, which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  self.check_worker_number_rationality()
+/work/hdd/bfxa/dshah13/mac_pruning_fv/.venv/lib/python3.12/site-packages/torch/utils/data/dataloader.py:432: UserWarning: This DataLoader will create 16 worker processes in total. Our suggested max number of worker in current system is 8, which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  self.check_worker_number_rationality()
+[🔧] Set target MACs to 0.62G (620000000.0 operations)
+[✅] Using model name: deit_tiny_distilled_patch16_224.fb_in1k
+
+[🚀] Initializing CIFAR10 pruning workflow...
+[📋] Model: deit_tiny_distilled_patch16_224.fb_in1k
+[📋] Dataset: cifar10 (10 classes)
+[📋] Data path: ./data
+[📁] Output directory: /work/hdd/bfxa/dshah13/expf_cl/deit_tiny_distilled_patch16_224.fb_in1k_cifar10_macs0p62g/job_16217111/models
+[🔧] Set pruning method to maskllm
+[🔧] Set accuracy threshold to 1.0%
+[🔧] Set maximum revisions to 10
+[INFO] baseline_macs not provided - will be calculated during profiling
+✅ Initialized OpenRouter with model: meta-llama/llama-3.2-3b-instruct
+[🔄] Created shared LLM instance using OpenRouter with model: meta-llama/llama-3.2-3b-instruct
+
+[⚙️] cifar10 workflow configuration: {'recursion_limit': 5000, 'configurable': {'thread_id': '1', 'checkpoint_ns': 'pruning_workflow_cifar10', 'checkpoint_id': 'run_1'}}
+
+[🏃] Starting cifar10 workflow execution...
+[🔄] Profiling cifar10 model
+[⏱️] Starting: 1. MAC-aware Profiling Agent
+[🔍] MAC Context: N/A → 0.620G (+1.0%/-20.0%)
+[✅] torch_pruning measured: 1.266 GMACs
+
+OpenRouter Response Status: 200
+[✅] MAC Target: 0.620G (49.0% efficiency)
+[⏱️] Completed: 1. MAC-aware Profiling Agent in 36.49s
+
+[🔄] cifar10 step received: dict_keys(['profile'])
+[🔄] Master Agent analyzing cifar10 strategy
+[🔍] Two-Phase MAC Search Status:
+   Current revision: 0
+   Candidate models found: 0
+[🔍] Phase 1: Searching for first model within MAC tolerance...
+✅ Initialized OpenRouter with model: meta-llama/llama-3.2-3b-instruct
+[🧠] MAC context: 1.266G → 0.620G (+1.0%/-20.0%)
+
+OpenRouter Response Status: 200
+[⚠️] Adjusting MAC target from 0.620G to 0.620G
+[🧠] MAC Master Agent exploration strategy: Explore different MAC allocation configurations for cifar10.
+[🧠] MAC allocation tuning priorities: ['isomorphic_group_ratios', 'importance_criterion', 'round_to']
+[🧠] MAC budget focused: True
+[🧠] Continue: True
+
+[🔄] cifar10 step received: dict_keys(['master'])
+[📋] Found Master Agent guidance:
+   Directives: Explore different MAC allocation configurations for cifar10.
+[📋] Master Agent directives: Explore different MAC allocation configurations for cifar10.
+[⏱️] Starting: 3. Enhanced Analysis Agent
+[🔧] Calculated target ratio from MACs: 0.510 (51.0%)
+[🔧] Calculated target ratio from MACs: 0.510 (51.0%)
+[🧠] ViT Analysis with Historical Learning (MACs-first):
+   Target ratio: 0.510 (user-specified)
+   Target MACs:  0.620G (baseline 1.266G, tolerance +1.0%/-20.0%)
+   Model: deit_tiny_distilled_patch16_224.fb_in1k
+   Revision: 0
+   History entries: 0
+[🎯] First attempt - using MACs-first baseline strategy
+
+OpenRouter Response Status: 200
+[🤖] MaskLLM N:M baseline for deit_tiny_distilled_patch16_224.fb_in1k on cifar10:
+   Target: 0.620G (baseline 1.266G)
+   attn_nm: 4:8 (50.0% dense)
+   mlp_nm:  4:7 (57.1% dense)
+   Estimated MACs: 0.623G
+[✅] ViT strategy complete: vit_macs_first_baseline_estimate
+[✅] Using LLM strategy directly - no safety overrides
+[⏱️] Completed: 3. Enhanced Analysis Agent in 10.85s
+[🛡️] Safety validation completed for cifar10
+[✅] No safety corrections needed - Analysis Agent provided compliant parameters
+
+[🔄] cifar10 step received: dict_keys(['analyze'])
+[🔄] Executing cifar10 pruning
+[⏱️] Starting: 4. Pruning Agent
+
+[🔧] Executing dataset-aware pruning with Analysis Agent recommendations...
+
+[🔧] Starting MaskLLM pruning pipeline...
+[🎯] Using MACs-first approach, target ratio will be derived
+[📏] Using round-to value: None
+[🔧] Using conservative default cifar10 isomorphic ratios: {'qkv_multiplier': 0.25, 'mlp_multiplier': 0.5, 'proj_multiplier': 0.0, 'head_multiplier': 0.0}
+[🎯] Direct N:M patterns from agent: attn={'N': 4, 'M': 8}, mlp={'N': 4, 'M': 7}
+[💻] Using device: cuda
+[💾] Creating deep copy of unpruned original model before pruning...
+[✅] Original unpruned model stored in state for later reattachment.
+
+[Phase 1] SparseGPT Initialization...
+[📊] Base model: 5,528,660 params, 1.266G MACs
+[🔄] Calculated target ratio from MACs: 0.5103
+[🔍] Found 12 transformer blocks
+[📊] Total model MACs: 1.266G
+[📊] Target MACs: 0.620G
+[📊] Target ratio: 0.510
+[🔍] Found 24 MLP layers (3,538,944 total params)
+[📊] MLP MAC fraction estimated: 0.666 (3,538,944/5,312,256 params)
+[🔍] Found 24 attention layers (1,769,472 total params)
+[📊] Attention MAC fraction estimated: 0.333 (1,769,472/5,312,256 params)
+[🪫] Max feasible reduction under caps: 0.990 → best achievable ≈ 0.013G
+[🎯] LLM suggests: mlp_pruning=0.500, attn_pruning=0.250
+[🎯] Using as pruning ratios: r_mlp=0.500, r_attn=0.250
+[🎯] Predicted achievement: 0.417 (target: 0.510)
+[⚖️] Post-alloc solve -> r_mlp=0.500, r_attn=0.250 (mlp_frac=0.667, attn_frac=0.333, caps: 0.99/0.99)
+[📊] MLP: 0.844G → 0.422G (ratio: 0.500)
+[📊] Attention: 0.422G → 0.316G (ratio: 0.250)
+[📊] Final group summary:
+  - MLP blocks: 12 couples
+  - Attention blocks: 12 couples
+  - Output projections: 0 layers
+Replaced blocks.0.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.0.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.0.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.0.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.1.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.1.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.1.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.1.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.2.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.2.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.2.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.2.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.3.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.3.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.3.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.3.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.4.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.4.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.4.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.4.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.5.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.5.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.5.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.5.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.6.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.6.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.6.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.6.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.7.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.7.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.7.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.7.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.8.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.8.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.8.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.8.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.9.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.9.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.9.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.9.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.10.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.10.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.10.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.10.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.11.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.11.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.11.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.11.mlp.fc2: {'N': 4, 'M': 7}
+Replaced head_dist: {'N': 8, 'M': 9}
+Ready.
+0 attn.qkv
+Pruning ...
+time 29.71
+error 36.07466125488281
+0 attn.proj
+Pruning ...
+time 0.08
+error 0.10961730778217316
+0 mlp.fc1
+Pruning ...
+time 0.08
+error 67.00265502929688
+0 mlp.fc2
+Pruning ...
+time 0.35
+error 1.066666841506958
+1 attn.qkv
+Pruning ...
+time 0.08
+error 43.86562728881836
+1 attn.proj
+Pruning ...
+time 0.08
+error 0.16825895011425018
+1 mlp.fc1
+Pruning ...
+time 0.08
+error 80.54326629638672
+1 mlp.fc2
+Pruning ...
+time 0.31
+error 1.1835675239562988
+2 attn.qkv
+Pruning ...
+time 0.08
+error 49.225791931152344
+2 attn.proj
+Pruning ...
+time 0.08
+error 0.14858727157115936
+2 mlp.fc1
+Pruning ...
+time 0.08
+error 88.94622802734375
+2 mlp.fc2
+Pruning ...
+time 0.31
+error 1.2034142017364502
+3 attn.qkv
+Pruning ...
+time 0.08
+error 51.746925354003906
+3 attn.proj
+Pruning ...
+time 0.08
+error 0.21294407546520233
+3 mlp.fc1
+Pruning ...
+time 0.08
+error 93.86555480957031
+3 mlp.fc2
+Pruning ...
+time 0.32
+error 1.26993727684021
+4 attn.qkv
+Pruning ...
+time 0.08
+error 56.109718322753906
+4 attn.proj
+Pruning ...
+time 0.08
+error 0.2117917835712433
+4 mlp.fc1
+Pruning ...
+time 0.08
+error 96.38837432861328
+4 mlp.fc2
+Pruning ...
+time 0.31
+error 1.2139490842819214
+5 attn.qkv
+Pruning ...
+time 0.08
+error 54.37466812133789
+5 attn.proj
+Pruning ...
+time 0.08
+error 0.19968238472938538
+5 mlp.fc1
+Pruning ...
+time 0.08
+error 101.70350646972656
+5 mlp.fc2
+Pruning ...
+time 0.31
+error 1.282524585723877
+6 attn.qkv
+Pruning ...
+time 0.08
+error 57.895652770996094
+6 attn.proj
+Pruning ...
+time 0.08
+error 0.21755173802375793
+6 mlp.fc1
+Pruning ...
+time 0.08
+error 106.70022583007812
+6 mlp.fc2
+Pruning ...
+time 0.31
+error 1.3320786952972412
+7 attn.qkv
+Pruning ...
+time 0.08
+error 59.07060623168945
+7 attn.proj
+Pruning ...
+time 0.08
+error 0.2253279983997345
+7 mlp.fc1
+Pruning ...
+time 0.08
+error 108.1898193359375
+7 mlp.fc2
+Pruning ...
+time 0.31
+error 1.284098505973816
+8 attn.qkv
+Pruning ...
+time 0.08
+error 58.51591110229492
+8 attn.proj
+Pruning ...
+time 0.08
+error 0.21151183545589447
+8 mlp.fc1
+Pruning ...
+time 0.08
+error 109.12609100341797
+8 mlp.fc2
+Pruning ...
+time 0.31
+error 1.270143747329712
+9 attn.qkv
+Pruning ...
+time 0.08
+error 60.602088928222656
+9 attn.proj
+Pruning ...
+time 0.08
+error 0.28980129957199097
+9 mlp.fc1
+Pruning ...
+time 0.08
+error 113.8282241821289
+9 mlp.fc2
+Pruning ...
+time 0.31
+error 1.3717925548553467
+10 attn.qkv
+Pruning ...
+time 0.08
+error 61.63741683959961
+10 attn.proj
+Pruning ...
+time 0.08
+error 0.2850664258003235
+10 mlp.fc1
+Pruning ...
+time 0.08
+error 115.27835083007812
+10 mlp.fc2
+Pruning ...
+time 0.31
+error 1.4108531475067139
+11 attn.qkv
+Pruning ...
+time 0.08
+error 61.110572814941406
+11 attn.proj
+Pruning ...
+time 0.08
+error 0.20280998945236206
+11 mlp.fc1
+Pruning ...
+time 0.08
+error 115.94961547851562
+11 mlp.fc2
+Pruning ...
+time 0.31
+error 1.4308514595031738
+[✅] SparseGPT initialization complete
+  Layer blocks.0.attn.qkv sparsity: 0.500
+  Layer blocks.0.attn.proj sparsity: 0.500
+  Layer blocks.0.mlp.fc1 sparsity: 0.562
+  Layer blocks.0.mlp.fc2 sparsity: 0.562
+  Layer blocks.1.attn.qkv sparsity: 0.500
+  Layer blocks.1.attn.proj sparsity: 0.500
+  Layer blocks.1.mlp.fc1 sparsity: 0.562
+  Layer blocks.1.mlp.fc2 sparsity: 0.562
+  Layer blocks.2.attn.qkv sparsity: 0.500
+  Layer blocks.2.attn.proj sparsity: 0.500
+  Layer blocks.2.mlp.fc1 sparsity: 0.562
+  Layer blocks.2.mlp.fc2 sparsity: 0.562
+  Layer blocks.3.attn.qkv sparsity: 0.500
+  Layer blocks.3.attn.proj sparsity: 0.500
+  Layer blocks.3.mlp.fc1 sparsity: 0.562
+  Layer blocks.3.mlp.fc2 sparsity: 0.562
+  Layer blocks.4.attn.qkv sparsity: 0.500
+  Layer blocks.4.attn.proj sparsity: 0.500
+  Layer blocks.4.mlp.fc1 sparsity: 0.562
+  Layer blocks.4.mlp.fc2 sparsity: 0.562
+  Layer blocks.5.attn.qkv sparsity: 0.500
+  Layer blocks.5.attn.proj sparsity: 0.500
+  Layer blocks.5.mlp.fc1 sparsity: 0.562
+  Layer blocks.5.mlp.fc2 sparsity: 0.562
+  Layer blocks.6.attn.qkv sparsity: 0.500
+  Layer blocks.6.attn.proj sparsity: 0.500
+  Layer blocks.6.mlp.fc1 sparsity: 0.562
+  Layer blocks.6.mlp.fc2 sparsity: 0.562
+  Layer blocks.7.attn.qkv sparsity: 0.500
+  Layer blocks.7.attn.proj sparsity: 0.500
+  Layer blocks.7.mlp.fc1 sparsity: 0.562
+  Layer blocks.7.mlp.fc2 sparsity: 0.562
+  Layer blocks.8.attn.qkv sparsity: 0.500
+  Layer blocks.8.attn.proj sparsity: 0.500
+  Layer blocks.8.mlp.fc1 sparsity: 0.562
+  Layer blocks.8.mlp.fc2 sparsity: 0.562
+  Layer blocks.9.attn.qkv sparsity: 0.500
+  Layer blocks.9.attn.proj sparsity: 0.500
+  Layer blocks.9.mlp.fc1 sparsity: 0.562
+  Layer blocks.9.mlp.fc2 sparsity: 0.562
+  Layer blocks.10.attn.qkv sparsity: 0.500
+  Layer blocks.10.attn.proj sparsity: 0.500
+  Layer blocks.10.mlp.fc1 sparsity: 0.562
+  Layer blocks.10.mlp.fc2 sparsity: 0.562
+  Layer blocks.11.attn.qkv sparsity: 0.500
+  Layer blocks.11.attn.proj sparsity: 0.500
+  Layer blocks.11.mlp.fc1 sparsity: 0.562
+  Layer blocks.11.mlp.fc2 sparsity: 0.562
+  Layer head_dist sparsity: 0.000
+
+[Phase 2] MaskLLM Mask Learning...
+Replaced blocks.0.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.0.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.0.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.0.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.1.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.1.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.1.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.1.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.2.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.2.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.2.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.2.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.3.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.3.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.3.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.3.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.4.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.4.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.4.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.4.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.5.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.5.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.5.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.5.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.6.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.6.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.6.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.6.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.7.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.7.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.7.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.7.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.8.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.8.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.8.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.8.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.9.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.9.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.9.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.9.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.10.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.10.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.10.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.10.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.11.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.11.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.11.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.11.mlp.fc2: {'N': 4, 'M': 7}
+Replaced head: {'N': 8, 'M': 9}
+Replaced head_dist: {'N': 8, 'M': 9}
+[📊] MaskLLM model (before training):
+  Total params:  38,709,974
+  Weight params: 5,528,660
+  Gate params:   33,181,314 (85.72%)
+  blocks.0.attn.qkv: N=4, M=8, C(M,N)=70, blocks=13,824, gate_params=967,680
+  blocks.0.attn.proj: N=4, M=8, C(M,N)=70, blocks=4,608, gate_params=322,560
+  blocks.0.mlp.fc1: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.0.mlp.fc2: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.1.attn.qkv: N=4, M=8, C(M,N)=70, blocks=13,824, gate_params=967,680
+  blocks.1.attn.proj: N=4, M=8, C(M,N)=70, blocks=4,608, gate_params=322,560
+  blocks.1.mlp.fc1: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.1.mlp.fc2: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.2.attn.qkv: N=4, M=8, C(M,N)=70, blocks=13,824, gate_params=967,680
+  blocks.2.attn.proj: N=4, M=8, C(M,N)=70, blocks=4,608, gate_params=322,560
+  blocks.2.mlp.fc1: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.2.mlp.fc2: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.3.attn.qkv: N=4, M=8, C(M,N)=70, blocks=13,824, gate_params=967,680
+  blocks.3.attn.proj: N=4, M=8, C(M,N)=70, blocks=4,608, gate_params=322,560
+  blocks.3.mlp.fc1: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.3.mlp.fc2: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.4.attn.qkv: N=4, M=8, C(M,N)=70, blocks=13,824, gate_params=967,680
+  blocks.4.attn.proj: N=4, M=8, C(M,N)=70, blocks=4,608, gate_params=322,560
+  blocks.4.mlp.fc1: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.4.mlp.fc2: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.5.attn.qkv: N=4, M=8, C(M,N)=70, blocks=13,824, gate_params=967,680
+  blocks.5.attn.proj: N=4, M=8, C(M,N)=70, blocks=4,608, gate_params=322,560
+  blocks.5.mlp.fc1: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.5.mlp.fc2: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.6.attn.qkv: N=4, M=8, C(M,N)=70, blocks=13,824, gate_params=967,680
+  blocks.6.attn.proj: N=4, M=8, C(M,N)=70, blocks=4,608, gate_params=322,560
+  blocks.6.mlp.fc1: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.6.mlp.fc2: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.7.attn.qkv: N=4, M=8, C(M,N)=70, blocks=13,824, gate_params=967,680
+  blocks.7.attn.proj: N=4, M=8, C(M,N)=70, blocks=4,608, gate_params=322,560
+  blocks.7.mlp.fc1: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.7.mlp.fc2: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.8.attn.qkv: N=4, M=8, C(M,N)=70, blocks=13,824, gate_params=967,680
+  blocks.8.attn.proj: N=4, M=8, C(M,N)=70, blocks=4,608, gate_params=322,560
+  blocks.8.mlp.fc1: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.8.mlp.fc2: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.9.attn.qkv: N=4, M=8, C(M,N)=70, blocks=13,824, gate_params=967,680
+  blocks.9.attn.proj: N=4, M=8, C(M,N)=70, blocks=4,608, gate_params=322,560
+  blocks.9.mlp.fc1: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.9.mlp.fc2: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.10.attn.qkv: N=4, M=8, C(M,N)=70, blocks=13,824, gate_params=967,680
+  blocks.10.attn.proj: N=4, M=8, C(M,N)=70, blocks=4,608, gate_params=322,560
+  blocks.10.mlp.fc1: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.10.mlp.fc2: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.11.attn.qkv: N=4, M=8, C(M,N)=70, blocks=13,824, gate_params=967,680
+  blocks.11.attn.proj: N=4, M=8, C(M,N)=70, blocks=4,608, gate_params=322,560
+  blocks.11.mlp.fc1: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  blocks.11.mlp.fc2: N=4, M=7, C(M,N)=35, blocks=21,065, gate_params=737,275
+  head: N=8, M=9, C(M,N)=9, blocks=213, gate_params=1,917
+  head_dist: N=8, M=9, C(M,N)=9, blocks=213, gate_params=1,917
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([13824, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([4608, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([13824, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([4608, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([13824, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([4608, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([13824, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([4608, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([13824, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([4608, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([13824, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([4608, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([13824, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([4608, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([13824, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([4608, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([13824, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([4608, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([13824, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([4608, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([13824, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([4608, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([13824, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5000
+Block shape: torch.Size([4608, 70])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.5625
+Block shape: torch.Size([21065, 35])
+initializing with prior (strength=3), Prior Sparsity: 0.0000
+Block shape: torch.Size([213, 9])
+initializing with prior (strength=3), Prior Sparsity: 0.0000
+Block shape: torch.Size([213, 9])
+[🔒] Freezing all parameters except .gate...
+[🎯] MaskLLM training: 10 epochs, lr=0.001
+[Epoch 0/10] tau=4.000, scaling=10.0
+[Epoch 0] Loss: 2.1438, Top-1: 19.50%, Top-5: 70.02%
+[Epoch 1/10] tau=3.561, scaling=20.0
+[Epoch 1] Loss: 2.0090, Top-1: 27.60%, Top-5: 78.52%
+[Epoch 2/10] tau=3.122, scaling=30.0
+[Epoch 2] Loss: 1.8409, Top-1: 33.64%, Top-5: 84.92%
+[Epoch 3/10] tau=2.683, scaling=40.0
+[Epoch 3] Loss: 1.8080, Top-1: 33.62%, Top-5: 85.05%
+[Epoch 4/10] tau=2.244, scaling=50.0
+[Epoch 4] Loss: 1.7465, Top-1: 37.52%, Top-5: 86.18%
+[Epoch 5/10] tau=1.806, scaling=60.0
+[Epoch 5] Loss: 1.6751, Top-1: 40.26%, Top-5: 88.58%
+[Epoch 6/10] tau=1.367, scaling=70.0
+[Epoch 6] Loss: 1.6591, Top-1: 41.08%, Top-5: 88.94%
+[Epoch 7/10] tau=0.928, scaling=80.0
+[Epoch 7] Loss: 1.6523, Top-1: 41.30%, Top-5: 89.13%
+[Epoch 8/10] tau=0.489, scaling=90.0
+[Epoch 8] Loss: 1.6515, Top-1: 41.30%, Top-5: 89.13%
+[Epoch 9/10] tau=0.050, scaling=100.0
+[Epoch 9] Loss: 1.6479, Top-1: 41.35%, Top-5: 89.21%
+[✅] MaskLLM training complete
+
+[Phase 3] Extracting learned masks...
+Replaced blocks.0.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.0.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.0.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.0.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.1.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.1.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.1.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.1.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.2.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.2.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.2.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.2.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.3.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.3.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.3.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.3.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.4.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.4.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.4.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.4.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.5.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.5.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.5.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.5.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.6.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.6.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.6.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.6.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.7.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.7.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.7.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.7.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.8.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.8.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.8.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.8.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.9.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.9.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.9.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.9.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.10.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.10.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.10.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.10.mlp.fc2: {'N': 4, 'M': 7}
+Replaced blocks.11.attn.qkv: {'N': 4, 'M': 8}
+Replaced blocks.11.attn.proj: {'N': 4, 'M': 8}
+Replaced blocks.11.mlp.fc1: {'N': 4, 'M': 7}
+Replaced blocks.11.mlp.fc2: {'N': 4, 'M': 7}
+Replaced head: {'N': 8, 'M': 9}
+Replaced head_dist: {'N': 8, 'M': 9}
+[📊] Frozen model (after training):
+  Total params:  5,528,660
+  Gate params removed: 33,181,314
+  Param reduction: 85.72% fewer than MaskLLM model
+[✅] Final model created with learned frozen masks
+  Final blocks.0.attn.qkv sparsity: 0.500
+  Final blocks.0.attn.proj sparsity: 0.500
+  Final blocks.0.mlp.fc1 sparsity: 0.429
+  Final blocks.0.mlp.fc2 sparsity: 0.429
+  Final blocks.1.attn.qkv sparsity: 0.500
+  Final blocks.1.attn.proj sparsity: 0.500
+  Final blocks.1.mlp.fc1 sparsity: 0.429
+  Final blocks.1.mlp.fc2 sparsity: 0.429
+  Final blocks.2.attn.qkv sparsity: 0.500
+  Final blocks.2.attn.proj sparsity: 0.500
+  Final blocks.2.mlp.fc1 sparsity: 0.429
+  Final blocks.2.mlp.fc2 sparsity: 0.429
+  Final blocks.3.attn.qkv sparsity: 0.500
+  Final blocks.3.attn.proj sparsity: 0.500
+  Final blocks.3.mlp.fc1 sparsity: 0.429
+  Final blocks.3.mlp.fc2 sparsity: 0.429
+  Final blocks.4.attn.qkv sparsity: 0.500
+  Final blocks.4.attn.proj sparsity: 0.500
+  Final blocks.4.mlp.fc1 sparsity: 0.429
+  Final blocks.4.mlp.fc2 sparsity: 0.429
+  Final blocks.5.attn.qkv sparsity: 0.500
+  Final blocks.5.attn.proj sparsity: 0.500
+  Final blocks.5.mlp.fc1 sparsity: 0.429
+  Final blocks.5.mlp.fc2 sparsity: 0.429
+  Final blocks.6.attn.qkv sparsity: 0.500
+  Final blocks.6.attn.proj sparsity: 0.500
+  Final blocks.6.mlp.fc1 sparsity: 0.429
+  Final blocks.6.mlp.fc2 sparsity: 0.429
+  Final blocks.7.attn.qkv sparsity: 0.500
+  Final blocks.7.attn.proj sparsity: 0.500
+  Final blocks.7.mlp.fc1 sparsity: 0.429
+  Final blocks.7.mlp.fc2 sparsity: 0.429
+  Final blocks.8.attn.qkv sparsity: 0.500
+  Final blocks.8.attn.proj sparsity: 0.500
+  Final blocks.8.mlp.fc1 sparsity: 0.429
+  Final blocks.8.mlp.fc2 sparsity: 0.429
+  Final blocks.9.attn.qkv sparsity: 0.500
+  Final blocks.9.attn.proj sparsity: 0.500
+  Final blocks.9.mlp.fc1 sparsity: 0.429
+  Final blocks.9.mlp.fc2 sparsity: 0.429
+  Final blocks.10.attn.qkv sparsity: 0.500
+  Final blocks.10.attn.proj sparsity: 0.500
+  Final blocks.10.mlp.fc1 sparsity: 0.429
+  Final blocks.10.mlp.fc2 sparsity: 0.429
+  Final blocks.11.attn.qkv sparsity: 0.500
+  Final blocks.11.attn.proj sparsity: 0.500
+  Final blocks.11.mlp.fc1 sparsity: 0.429
+  Final blocks.11.mlp.fc2 sparsity: 0.429
+  Final head sparsity: 0.111
+  Final head_dist sparsity: 0.111
+
+[Phase 4] Evaluating final MaskLLM model...
+[🎯] Zero-shot accuracy: 41.35%
+[📊] MaskLLM model accuracy: 41.35%
+[📊] MACs: 1.266G -> 0.565G (reduction: 55.3%)
+[💾] Saved MaskLLM checkpoint: /work/hdd/bfxa/dshah13/expf_cl/deit_tiny_distilled_patch16_224.fb_in1k_cifar10_macs0p62g/job_16217111/checkpoints/maskllm_deit_tiny_distilled_patch16_224.fb_in1k_cifar10_rev0.pth
+
+[📊] MaskLLM Pruning Results Summary:
+  MACs reduction: 55.34%
+  MaskLLM accuracy: 41.35%
+[⏱️] Completed: 4. Pruning Agent in 968.91s
+[✅] Achieved 0.565G MACs, meets target 620000000.000G (error: -8.8%)
+[🔧] Patched attention forward for blocks.0.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.1.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.2.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.3.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.4.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.5.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.6.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.7.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.8.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.9.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.10.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.11.attn (head_dim: 64)
+[💾] Stored pruned model in MODEL_STORE
+[✅] MACs WITHIN TOLERANCE:
+   Achieved: 0.565G vs Target: 0.620G
+   Error: -8.80% (tolerance: +1.0%/-20.0%)
+   Zero-shot accuracy: 41.35% - proceeding to fine-tune
+
+[🔄] cifar10 step received: dict_keys(['prune'])
+[🔄] Fine-tuning cifar10 model
+[⏱️] Starting: 5. Fine-tuning Agent
+
+[🔄] Starting REVISED CIFAR10 fine-tuning process...
+[💻] Fine-tuning on device: cuda
+[🔍] Model type: ViT
+[🔧] Using LR 0.0005 for 55.3% pruned model
+[🧮] Using AdamW optimizer for ViT
+[🎯] Simple fine-tuning: 30 epochs, LR 0.0005
+
+[📊] Epoch 1/30
+[🔄] Batch 0: Loss 1.752, Acc 36.72%
+[🔄] Batch 100: Loss 1.788, Acc 36.08%
+[🔄] Batch 200: Loss 1.785, Acc 37.64%
+[🔄] Batch 300: Loss 1.707, Acc 38.42%
+[📊] Validation: Accuracy 38.59%
+[✅] New best: 38.59%
+
+[📊] Epoch 2/30
+[🔄] Batch 0: Loss 1.700, Acc 35.94%
+[🔄] Batch 100: Loss 1.807, Acc 33.34%
+[🔄] Batch 200: Loss 1.758, Acc 35.09%
+[🔄] Batch 300: Loss 1.544, Acc 36.56%
+[📊] Validation: Accuracy 39.79%
+[✅] New best: 39.79%
+
+[📊] Epoch 3/30
+[🔄] Batch 0: Loss 1.615, Acc 42.19%
+[🔄] Batch 100: Loss 1.742, Acc 41.67%
+[🔄] Batch 200: Loss 1.562, Acc 42.89%
+[🔄] Batch 300: Loss 1.636, Acc 44.01%
+[📊] Validation: Accuracy 47.99%
+[✅] New best: 47.99%
+
+[📊] Epoch 4/30
+[🔄] Batch 0: Loss 1.484, Acc 53.91%
+[🔄] Batch 100: Loss 1.569, Acc 50.19%
+[🔄] Batch 200: Loss 1.283, Acc 50.87%
+[🔄] Batch 300: Loss 1.498, Acc 51.50%
+[📊] Validation: Accuracy 52.95%
+[✅] New best: 52.95%
+
+[📊] Epoch 5/30
+[🔄] Batch 0: Loss 1.369, Acc 53.91%
+[🔄] Batch 100: Loss 1.526, Acc 55.40%
+[🔄] Batch 200: Loss 1.373, Acc 55.79%
+[🔄] Batch 300: Loss 1.407, Acc 56.14%
+[📊] Validation: Accuracy 55.83%
+[✅] New best: 55.83%
+
+[📊] Epoch 6/30
+[🔄] Batch 0: Loss 1.391, Acc 52.34%
+[🔄] Batch 100: Loss 1.450, Acc 57.95%
+[🔄] Batch 200: Loss 1.404, Acc 58.19%
+[🔄] Batch 300: Loss 1.329, Acc 58.54%
+[📊] Validation: Accuracy 58.12%
+[✅] New best: 58.12%
+
+[📊] Epoch 7/30
+[🔄] Batch 0: Loss 1.407, Acc 50.78%
+[🔄] Batch 100: Loss 1.056, Acc 61.46%
+[🔄] Batch 200: Loss 1.287, Acc 61.33%
+[🔄] Batch 300: Loss 1.163, Acc 61.39%
+[📊] Validation: Accuracy 63.16%
+[✅] New best: 63.16%
+
+[📊] Epoch 8/30
+[🔄] Batch 0: Loss 1.194, Acc 63.28%
+[🔄] Batch 100: Loss 1.268, Acc 63.53%
+[🔄] Batch 200: Loss 1.179, Acc 63.25%
+[🔄] Batch 300: Loss 1.208, Acc 63.33%
+[📊] Validation: Accuracy 63.85%
+[✅] New best: 63.85%
+
+[📊] Epoch 9/30
+[🔄] Batch 0: Loss 1.098, Acc 64.84%
+[🔄] Batch 100: Loss 1.043, Acc 64.44%
+[🔄] Batch 200: Loss 1.096, Acc 65.09%
+[🔄] Batch 300: Loss 1.159, Acc 65.01%
+[📊] Validation: Accuracy 64.53%
+[✅] New best: 64.53%
+
+[📊] Epoch 10/30
+[🔄] Batch 0: Loss 1.161, Acc 61.72%
+[🔄] Batch 100: Loss 1.025, Acc 66.64%
+[🔄] Batch 200: Loss 1.157, Acc 67.01%
+[🔄] Batch 300: Loss 1.121, Acc 67.28%
+[📊] Validation: Accuracy 66.72%
+[✅] New best: 66.72%
+
+[📊] Epoch 11/30
+[🔄] Batch 0: Loss 1.101, Acc 66.41%
+[🔄] Batch 100: Loss 1.003, Acc 68.70%
+[🔄] Batch 200: Loss 1.013, Acc 68.60%
+[🔄] Batch 300: Loss 1.168, Acc 68.70%
+[📊] Validation: Accuracy 68.05%
+[✅] New best: 68.05%
+
+[📊] Epoch 12/30
+[🔄] Batch 0: Loss 1.100, Acc 67.19%
+[🔄] Batch 100: Loss 0.905, Acc 69.87%
+[🔄] Batch 200: Loss 1.034, Acc 70.02%
+[🔄] Batch 300: Loss 0.965, Acc 69.93%
+[📊] Validation: Accuracy 69.89%
+[✅] New best: 69.89%
+
+[📊] Epoch 13/30
+[🔄] Batch 0: Loss 1.046, Acc 70.31%
+[🔄] Batch 100: Loss 1.066, Acc 71.64%
+[🔄] Batch 200: Loss 1.033, Acc 71.60%
+[🔄] Batch 300: Loss 0.914, Acc 71.53%
+[📊] Validation: Accuracy 71.14%
+[✅] New best: 71.14%
+
+[📊] Epoch 14/30
+[🔄] Batch 0: Loss 0.917, Acc 73.44%
+[🔄] Batch 100: Loss 0.938, Acc 72.05%
+[🔄] Batch 200: Loss 1.106, Acc 72.29%
+[🔄] Batch 300: Loss 0.969, Acc 72.62%
+[📊] Validation: Accuracy 69.72%
+[📉] No improvement for 1/5 epochs (best: 71.14%)
+
+[📊] Epoch 15/30
+[🔄] Batch 0: Loss 0.966, Acc 75.78%
+[🔄] Batch 100: Loss 1.000, Acc 74.32%
+[🔄] Batch 200: Loss 0.836, Acc 74.37%
+[🔄] Batch 300: Loss 0.971, Acc 74.43%
+[📊] Validation: Accuracy 72.39%
+[✅] New best: 72.39%
+
+[📊] Epoch 16/30
+[🔄] Batch 0: Loss 0.805, Acc 77.34%
+[🔄] Batch 100: Loss 1.085, Acc 75.33%
+[🔄] Batch 200: Loss 0.991, Acc 75.15%
+[🔄] Batch 300: Loss 0.819, Acc 75.32%
+[📊] Validation: Accuracy 72.97%
+[✅] New best: 72.97%
+
+[📊] Epoch 17/30
+[🔄] Batch 0: Loss 1.019, Acc 71.09%
+[🔄] Batch 100: Loss 0.733, Acc 76.07%
+[🔄] Batch 200: Loss 0.812, Acc 76.44%
+[🔄] Batch 300: Loss 0.740, Acc 76.51%
+[📊] Validation: Accuracy 72.84%
+[📉] No improvement for 1/5 epochs (best: 72.97%)
+
+[📊] Epoch 18/30
+[🔄] Batch 0: Loss 0.703, Acc 85.16%
+[🔄] Batch 100: Loss 0.727, Acc 77.34%
+[🔄] Batch 200: Loss 0.893, Acc 77.60%
+[🔄] Batch 300: Loss 0.793, Acc 77.41%
+[📊] Validation: Accuracy 73.77%
+[✅] New best: 73.77%
+
+[📊] Epoch 19/30
+[🔄] Batch 0: Loss 0.801, Acc 82.03%
+[🔄] Batch 100: Loss 0.751, Acc 78.62%
+[🔄] Batch 200: Loss 0.772, Acc 78.53%
+[🔄] Batch 300: Loss 0.710, Acc 78.53%
+[📊] Validation: Accuracy 74.86%
+[✅] New best: 74.86%
+
+[📊] Epoch 20/30
+[🔄] Batch 0: Loss 0.729, Acc 82.03%
+[🔄] Batch 100: Loss 0.752, Acc 80.04%
+[🔄] Batch 200: Loss 0.757, Acc 80.16%
+[🔄] Batch 300: Loss 0.730, Acc 79.82%
+[📊] Validation: Accuracy 75.95%
+[✅] New best: 75.95%
+
+[📊] Epoch 21/30
+[🔄] Batch 0: Loss 0.823, Acc 81.25%
+[🔄] Batch 100: Loss 0.711, Acc 81.30%
+[🔄] Batch 200: Loss 0.788, Acc 81.02%
+[🔄] Batch 300: Loss 0.859, Acc 81.07%
+[📊] Validation: Accuracy 75.92%
+[📉] No improvement for 1/5 epochs (best: 75.95%)
+
+[📊] Epoch 22/30
+[🔄] Batch 0: Loss 0.618, Acc 87.50%
+[🔄] Batch 100: Loss 0.750, Acc 81.68%
+[🔄] Batch 200: Loss 0.920, Acc 81.93%
+[🔄] Batch 300: Loss 0.803, Acc 81.95%
+[📊] Validation: Accuracy 77.30%
+[✅] New best: 77.30%
+
+[📊] Epoch 23/30
+[🔄] Batch 0: Loss 0.617, Acc 88.28%
+[🔄] Batch 100: Loss 0.746, Acc 82.74%
+[🔄] Batch 200: Loss 0.815, Acc 82.76%
+[🔄] Batch 300: Loss 0.738, Acc 82.72%
+[📊] Validation: Accuracy 77.70%
+[✅] New best: 77.70%
+
+[📊] Epoch 24/30
+[🔄] Batch 0: Loss 0.731, Acc 82.81%
+[🔄] Batch 100: Loss 0.746, Acc 83.85%
+[🔄] Batch 200: Loss 0.708, Acc 83.75%
+[🔄] Batch 300: Loss 0.694, Acc 83.72%
+[📊] Validation: Accuracy 78.20%
+[✅] New best: 78.20%
+
+[📊] Epoch 25/30
+[🔄] Batch 0: Loss 0.696, Acc 82.03%
+[🔄] Batch 100: Loss 0.619, Acc 84.48%
+[🔄] Batch 200: Loss 0.770, Acc 84.57%
+[🔄] Batch 300: Loss 0.608, Acc 84.70%
+[📊] Validation: Accuracy 78.45%
+[✅] New best: 78.45%
+
+[📊] Epoch 26/30
+[🔄] Batch 0: Loss 0.599, Acc 88.28%
+[🔄] Batch 100: Loss 0.660, Acc 85.32%
+[🔄] Batch 200: Loss 0.601, Acc 85.50%
+[🔄] Batch 300: Loss 0.766, Acc 85.42%
+[📊] Validation: Accuracy 78.51%
+[✅] New best: 78.51%
+
+[📊] Epoch 27/30
+[🔄] Batch 0: Loss 0.647, Acc 85.94%
+[🔄] Batch 100: Loss 0.657, Acc 86.03%
+[🔄] Batch 200: Loss 0.621, Acc 85.98%
+[🔄] Batch 300: Loss 0.568, Acc 86.11%
+[📊] Validation: Accuracy 78.70%
+[✅] New best: 78.70%
+
+[📊] Epoch 28/30
+[🔄] Batch 0: Loss 0.621, Acc 87.50%
+[🔄] Batch 100: Loss 0.667, Acc 86.56%
+[🔄] Batch 200: Loss 0.627, Acc 86.60%
+[🔄] Batch 300: Loss 0.513, Acc 86.53%
+[📊] Validation: Accuracy 79.02%
+[✅] New best: 79.02%
+
+[📊] Epoch 29/30
+[🔄] Batch 0: Loss 0.523, Acc 90.62%
+[🔄] Batch 100: Loss 0.571, Acc 86.83%
+[🔄] Batch 200: Loss 0.656, Acc 86.66%
+[🔄] Batch 300: Loss 0.667, Acc 86.79%
+[📊] Validation: Accuracy 78.82%
+[📉] No improvement for 1/5 epochs (best: 79.02%)
+
+[📊] Epoch 30/30
+[🔄] Batch 0: Loss 0.636, Acc 86.72%
+[🔄] Batch 100: Loss 0.610, Acc 87.02%
+[🔄] Batch 200: Loss 0.595, Acc 86.96%
+[🔄] Batch 300: Loss 0.538, Acc 86.97%
+[📊] Validation: Accuracy 79.05%
+[✅] New best: 79.05%
+[🏆] Using best model with 79.05% accuracy
+
+[📈] Fine-tuning Results:
+  - Zero-shot: 41.35%
+  - Fine-tuned: 79.05%
+  - Improvement: 37.70%
+  - Status: ✅ SUCCESS
+[⏱️] Completed: 5. Fine-tuning Agent in 1782.07s
+
+[🔄] cifar10 step received: dict_keys(['fine_tune'])
+[🔄] Evaluating cifar10 model
+[⏱️] Starting: 6. Evaluation Agent
+
+[📊] Starting comprehensive CIFAR10 evaluation...
+[📊] Stored Zero-shot accuracy: 41.35%
+
+[🧪] Evaluating fine-tuned model on cifar10...
+[📋] Dimensions match - safe to reattach components
+[✅] Reattached head (dim: 192, strict=False)
+[✅] Reattached head_dist (dim: 192, strict=False)
+[✅] Reattached cls_token (shape: torch.Size([1, 1, 192]))
+[✅] Reattached dist_token (shape: torch.Size([1, 1, 192]))
+[✅] Reattached pos_embed (shape: torch.Size([1, 198, 192]))
+[📊] Fine-tuned model accuracy: 67.45%
+[📈] CORRECT Accuracy improvement: 26.10% (63.1% relative)
+
+[✅] CIFAR10 Evaluation Complete:
+  - Success: True
+  - MAC Achievement: 0.565G (target: 0.620G)
+  - MAC Efficiency: 44.7% of baseline (1.266G)
+  - MAC Error: -8.8% (allowed: -20.0%…+1.0%)
+  - Final Accuracy: 67.45% (threshold: 1.0%)
+  - Accuracy Improvement: 26.10%
+  - Overshoot tolerance: +6200000.000G (+1.0%)
+  - Undershoot tolerance: -124000000.000G (-20.0%)
+[⏱️] Completed: 6. Evaluation Agent in 9.60s
+
+[🔄] cifar10 step received: dict_keys(['evaluate'])
+[🔄] Profiling cifar10 model
+[🔄] Profiling after evaluation, revision 1 for cifar10
+[⏱️] Starting: 1. MAC-aware Profiling Agent
+[🔍] MAC Context: 1.266G → 0.620G (+1.0%/-20.0%)
+[✅] torch_pruning measured: 1.266 GMACs
+
+OpenRouter Response Status: 200
+[✅] MAC Target: 0.620G (49.0% efficiency)
+[⏱️] Completed: 1. MAC-aware Profiling Agent in 39.88s
+
+[🔄] cifar10 step received: dict_keys(['profile'])
+[🔄] Master Agent analyzing cifar10 strategy
+[🔍] Two-Phase MAC Search Status:
+   Current revision: 1
+   Candidate models found: 2
+   First success at revision: 0
+[🎯] Phase 2: First MAC candidate found! Starting 20 additional trials...
+[📊] Current MAC candidates:
+     Candidate 1: Rev 0, 0.565G MACs (-8.8%), 0.00% Acc
+     Candidate 2: Rev 0, 0.565G MACs (-8.8%), 67.45% Acc
+[🔧] Initialized extended_search_remaining = 20
+✅ Initialized OpenRouter with model: meta-llama/llama-3.2-3b-instruct
+[🧠] MAC context: 1.266G → 0.620G (+1.0%/-20.0%)
+
+[🔄] cifar10 step received: dict_keys(['master'])
+[📋] Received general strategic guidance from Master Agent:
+   1. EXCELLENT MAC STRATEGY FOUND: 41.4% accuracy achieved
+   2. Strategy achieved 0.565G vs target 0.620G MAC
+[⏱️] Starting: 3. Enhanced Analysis Agent
+[🔧] Calculated target ratio from MACs: 0.510 (51.0%)
+[🔧] Calculated target ratio from MACs: 0.510 (51.0%)
+[🧠] ViT Analysis with Historical Learning (MACs-first):
+   Target ratio: 0.510 (user-specified)
+   Target MACs:  0.620G (baseline 1.266G, tolerance +1.0%/-20.0%)
+   Model: deit_tiny_distilled_patch16_224.fb_in1k
+   Revision: 1
+   History entries: 2
+[📋] GENERAL STRATEGIC GUIDANCE: Using guidance
+
+OpenRouter Response Status: 200
+[🧠] MaskLLM N:M learned from 2 attempts:
+   attn_nm: 6:7 (85.7% dense)
+   mlp_nm:  4:6 (66.7% dense)
+   Estimated MACs: 0.494G
+[✅] ViT strategy complete: general_strategic_guidance
+[✅] Using LLM strategy directly - no safety overrides
+[⏱️] Completed: 3. Enhanced Analysis Agent in 11.35s
+[🛡️] Safety validation completed for cifar10
+[✅] No safety corrections needed - Analysis Agent provided compliant parameters
+
+[🔄] cifar10 step received: dict_keys(['analyze'])
+[🔄] Executing cifar10 pruning
+[⏱️] Starting: 4. Pruning Agent
+
+[🔧] Executing dataset-aware pruning with Analysis Agent recommendations...
+
+[🔧] Starting MaskLLM pruning pipeline...
+[🎯] Using MACs-first approach, target ratio will be derived
+[📏] Using round-to value: None
+[🔧] Using conservative default cifar10 isomorphic ratios: {'qkv_multiplier': 0.25, 'mlp_multiplier': 0.5, 'proj_multiplier': 0.0, 'head_multiplier': 0.0}
+[🎯] Direct N:M patterns from agent: attn={'N': 6, 'M': 7}, mlp={'N': 4, 'M': 6}
+[💻] Using device: cuda
+[💾] Creating deep copy of unpruned original model before pruning...
+[✅] Original unpruned model stored in state for later reattachment.
+
+[Phase 1] SparseGPT Initialization...
+[📊] Base model: 5,528,660 params, 1.266G MACs
+[🔄] Calculated target ratio from MACs: 0.5103
+[⚠️] Ratio 0.5103 was previously attempted, but Analysis Agent suggested it again.
+[🔍] Found 12 transformer blocks
+[📊] Total model MACs: 1.266G
+[📊] Target MACs: 0.620G
+[📊] Target ratio: 0.510
+[🔍] Found 24 MLP layers (3,538,944 total params)
+[📊] MLP MAC fraction estimated: 0.666 (3,538,944/5,312,256 params)
+[🔍] Found 24 attention layers (1,769,472 total params)
+[📊] Attention MAC fraction estimated: 0.333 (1,769,472/5,312,256 params)
+[🪫] Max feasible reduction under caps: 0.990 → best achievable ≈ 0.013G
+[🎯] LLM suggests: mlp_pruning=0.500, attn_pruning=0.250
+[🎯] Using as pruning ratios: r_mlp=0.500, r_attn=0.250
+[🎯] Predicted achievement: 0.417 (target: 0.510)
+[⚖️] Post-alloc solve -> r_mlp=0.500, r_attn=0.250 (mlp_frac=0.667, attn_frac=0.333, caps: 0.99/0.99)
+[📊] MLP: 0.844G → 0.422G (ratio: 0.500)
+[📊] Attention: 0.422G → 0.316G (ratio: 0.250)
+[📊] Final group summary:
+  - MLP blocks: 12 couples
+  - Attention blocks: 12 couples
+  - Output projections: 0 layers
+Replaced blocks.0.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.0.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.0.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.0.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.1.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.1.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.1.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.1.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.2.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.2.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.2.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.2.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.3.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.3.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.3.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.3.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.4.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.4.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.4.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.4.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.5.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.5.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.5.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.5.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.6.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.6.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.6.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.6.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.7.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.7.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.7.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.7.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.8.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.8.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.8.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.8.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.9.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.9.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.9.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.9.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.10.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.10.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.10.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.10.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.11.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.11.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.11.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.11.mlp.fc2: {'N': 4, 'M': 6}
+Replaced head_dist: {'N': 8, 'M': 9}
+Ready.
+0 attn.qkv
+Pruning ...
+time 8.29
+error 418.0895690917969
+0 attn.proj
+Pruning ...
+time 0.08
+error 1.2483031749725342
+0 mlp.fc1
+Pruning ...
+time 0.08
+error 106.03289031982422
+0 mlp.fc2
+Pruning ...
+time 0.34
+error 2.0420169830322266
+1 attn.qkv
+Pruning ...
+time 0.08
+error 457.0191650390625
+1 attn.proj
+Pruning ...
+time 0.08
+error 2.5172667503356934
+1 mlp.fc1
+Pruning ...
+time 0.08
+error 130.06094360351562
+1 mlp.fc2
+Pruning ...
+time 0.32
+error 2.1488850116729736
+2 attn.qkv
+Pruning ...
+time 0.08
+error 504.485595703125
+2 attn.proj
+Pruning ...
+time 0.08
+error 1.322461485862732
+2 mlp.fc1
+Pruning ...
+time 0.08
+error 136.91162109375
+2 mlp.fc2
+Pruning ...
+time 0.32
+error 2.177666664123535
+3 attn.qkv
+Pruning ...
+time 0.08
+error 529.684326171875
+3 attn.proj
+Pruning ...
+time 0.08
+error 1.7704908847808838
+3 mlp.fc1
+Pruning ...
+time 0.08
+error 146.4684295654297
+3 mlp.fc2
+Pruning ...
+time 0.32
+error 2.2672696113586426
+4 attn.qkv
+Pruning ...
+time 0.08
+error 588.6514892578125
+4 attn.proj
+Pruning ...
+time 0.08
+error 3.0096182823181152
+4 mlp.fc1
+Pruning ...
+time 0.08
+error 148.92770385742188
+4 mlp.fc2
+Pruning ...
+time 0.32
+error 2.212912082672119
+5 attn.qkv
+Pruning ...
+time 0.08
+error 567.0079956054688
+5 attn.proj
+Pruning ...
+time 0.08
+error 3.50039005279541
+5 mlp.fc1
+Pruning ...
+time 0.08
+error 156.49217224121094
+5 mlp.fc2
+Pruning ...
+time 0.32
+error 2.3712148666381836
+6 attn.qkv
+Pruning ...
+time 0.08
+error 631.0953369140625
+6 attn.proj
+Pruning ...
+time 0.08
+error 2.5358729362487793
+6 mlp.fc1
+Pruning ...
+time 0.08
+error 160.72019958496094
+6 mlp.fc2
+Pruning ...
+time 0.32
+error 2.5309629440307617
+7 attn.qkv
+Pruning ...
+time 0.08
+error 623.3355102539062
+7 attn.proj
+Pruning ...
+time 0.08
+error 2.7942681312561035
+7 mlp.fc1
+Pruning ...
+time 0.08
+error 164.50326538085938
+7 mlp.fc2
+Pruning ...
+time 0.32
+error 2.3837907314300537
+8 attn.qkv
+Pruning ...
+time 0.08
+error 631.952392578125
+8 attn.proj
+Pruning ...
+time 0.08
+error 3.0840654373168945
+8 mlp.fc1
+Pruning ...
+time 0.08
+error 168.4056396484375
+8 mlp.fc2
+Pruning ...
+time 0.32
+error 2.2987537384033203
+9 attn.qkv
+Pruning ...
+time 0.08
+error 612.4287109375
+9 attn.proj
+Pruning ...
+time 0.08
+error 3.1107378005981445
+9 mlp.fc1
+Pruning ...
+time 0.08
+error 171.94857788085938
+9 mlp.fc2
+Pruning ...
+time 0.32
+error 2.4704034328460693
+10 attn.qkv
+Pruning ...
+time 0.08
+error 664.3538818359375
+10 attn.proj
+Pruning ...
+time 0.08
+error 2.0208988189697266
+10 mlp.fc1
+Pruning ...
+time 0.08
+error 174.55020141601562
+10 mlp.fc2
+Pruning ...
+time 0.32
+error 2.7545053958892822
+11 attn.qkv
+Pruning ...
+time 0.08
+error 637.24853515625
+11 attn.proj
+Pruning ...
+time 0.08
+error 2.8857603073120117
+11 mlp.fc1
+Pruning ...
+time 0.08
+error 171.2848358154297
+11 mlp.fc2
+Pruning ...
+time 0.32
+error 2.6299185752868652
+[✅] SparseGPT initialization complete
+  Layer blocks.0.attn.qkv sparsity: 0.844
+  Layer blocks.0.attn.proj sparsity: 0.844
+  Layer blocks.0.mlp.fc1 sparsity: 0.646
+  Layer blocks.0.mlp.fc2 sparsity: 0.656
+  Layer blocks.1.attn.qkv sparsity: 0.844
+  Layer blocks.1.attn.proj sparsity: 0.844
+  Layer blocks.1.mlp.fc1 sparsity: 0.646
+  Layer blocks.1.mlp.fc2 sparsity: 0.656
+  Layer blocks.2.attn.qkv sparsity: 0.844
+  Layer blocks.2.attn.proj sparsity: 0.844
+  Layer blocks.2.mlp.fc1 sparsity: 0.646
+  Layer blocks.2.mlp.fc2 sparsity: 0.656
+  Layer blocks.3.attn.qkv sparsity: 0.844
+  Layer blocks.3.attn.proj sparsity: 0.844
+  Layer blocks.3.mlp.fc1 sparsity: 0.646
+  Layer blocks.3.mlp.fc2 sparsity: 0.656
+  Layer blocks.4.attn.qkv sparsity: 0.844
+  Layer blocks.4.attn.proj sparsity: 0.844
+  Layer blocks.4.mlp.fc1 sparsity: 0.646
+  Layer blocks.4.mlp.fc2 sparsity: 0.656
+  Layer blocks.5.attn.qkv sparsity: 0.844
+  Layer blocks.5.attn.proj sparsity: 0.844
+  Layer blocks.5.mlp.fc1 sparsity: 0.646
+  Layer blocks.5.mlp.fc2 sparsity: 0.656
+  Layer blocks.6.attn.qkv sparsity: 0.844
+  Layer blocks.6.attn.proj sparsity: 0.844
+  Layer blocks.6.mlp.fc1 sparsity: 0.646
+  Layer blocks.6.mlp.fc2 sparsity: 0.656
+  Layer blocks.7.attn.qkv sparsity: 0.844
+  Layer blocks.7.attn.proj sparsity: 0.844
+  Layer blocks.7.mlp.fc1 sparsity: 0.646
+  Layer blocks.7.mlp.fc2 sparsity: 0.656
+  Layer blocks.8.attn.qkv sparsity: 0.844
+  Layer blocks.8.attn.proj sparsity: 0.844
+  Layer blocks.8.mlp.fc1 sparsity: 0.646
+  Layer blocks.8.mlp.fc2 sparsity: 0.656
+  Layer blocks.9.attn.qkv sparsity: 0.844
+  Layer blocks.9.attn.proj sparsity: 0.844
+  Layer blocks.9.mlp.fc1 sparsity: 0.646
+  Layer blocks.9.mlp.fc2 sparsity: 0.656
+  Layer blocks.10.attn.qkv sparsity: 0.844
+  Layer blocks.10.attn.proj sparsity: 0.844
+  Layer blocks.10.mlp.fc1 sparsity: 0.646
+  Layer blocks.10.mlp.fc2 sparsity: 0.656
+  Layer blocks.11.attn.qkv sparsity: 0.844
+  Layer blocks.11.attn.proj sparsity: 0.844
+  Layer blocks.11.mlp.fc1 sparsity: 0.646
+  Layer blocks.11.mlp.fc2 sparsity: 0.656
+  Layer head_dist sparsity: 0.000
+
+[Phase 2] MaskLLM Mask Learning...
+Replaced blocks.0.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.0.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.0.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.0.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.1.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.1.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.1.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.1.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.2.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.2.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.2.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.2.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.3.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.3.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.3.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.3.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.4.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.4.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.4.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.4.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.5.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.5.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.5.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.5.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.6.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.6.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.6.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.6.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.7.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.7.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.7.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.7.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.8.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.8.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.8.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.8.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.9.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.9.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.9.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.9.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.10.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.10.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.10.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.10.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.11.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.11.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.11.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.11.mlp.fc2: {'N': 4, 'M': 6}
+Replaced head: {'N': 8, 'M': 9}
+Replaced head_dist: {'N': 8, 'M': 9}
+[📊] MaskLLM model (before training):
+  Total params:  16,149,230
+  Weight params: 5,528,660
+  Gate params:   10,620,570 (65.77%)
+  blocks.0.attn.qkv: N=6, M=7, C(M,N)=7, blocks=15,798, gate_params=110,586
+  blocks.0.attn.proj: N=6, M=7, C(M,N)=7, blocks=5,266, gate_params=36,862
+  blocks.0.mlp.fc1: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.0.mlp.fc2: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.1.attn.qkv: N=6, M=7, C(M,N)=7, blocks=15,798, gate_params=110,586
+  blocks.1.attn.proj: N=6, M=7, C(M,N)=7, blocks=5,266, gate_params=36,862
+  blocks.1.mlp.fc1: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.1.mlp.fc2: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.2.attn.qkv: N=6, M=7, C(M,N)=7, blocks=15,798, gate_params=110,586
+  blocks.2.attn.proj: N=6, M=7, C(M,N)=7, blocks=5,266, gate_params=36,862
+  blocks.2.mlp.fc1: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.2.mlp.fc2: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.3.attn.qkv: N=6, M=7, C(M,N)=7, blocks=15,798, gate_params=110,586
+  blocks.3.attn.proj: N=6, M=7, C(M,N)=7, blocks=5,266, gate_params=36,862
+  blocks.3.mlp.fc1: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.3.mlp.fc2: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.4.attn.qkv: N=6, M=7, C(M,N)=7, blocks=15,798, gate_params=110,586
+  blocks.4.attn.proj: N=6, M=7, C(M,N)=7, blocks=5,266, gate_params=36,862
+  blocks.4.mlp.fc1: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.4.mlp.fc2: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.5.attn.qkv: N=6, M=7, C(M,N)=7, blocks=15,798, gate_params=110,586
+  blocks.5.attn.proj: N=6, M=7, C(M,N)=7, blocks=5,266, gate_params=36,862
+  blocks.5.mlp.fc1: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.5.mlp.fc2: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.6.attn.qkv: N=6, M=7, C(M,N)=7, blocks=15,798, gate_params=110,586
+  blocks.6.attn.proj: N=6, M=7, C(M,N)=7, blocks=5,266, gate_params=36,862
+  blocks.6.mlp.fc1: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.6.mlp.fc2: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.7.attn.qkv: N=6, M=7, C(M,N)=7, blocks=15,798, gate_params=110,586
+  blocks.7.attn.proj: N=6, M=7, C(M,N)=7, blocks=5,266, gate_params=36,862
+  blocks.7.mlp.fc1: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.7.mlp.fc2: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.8.attn.qkv: N=6, M=7, C(M,N)=7, blocks=15,798, gate_params=110,586
+  blocks.8.attn.proj: N=6, M=7, C(M,N)=7, blocks=5,266, gate_params=36,862
+  blocks.8.mlp.fc1: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.8.mlp.fc2: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.9.attn.qkv: N=6, M=7, C(M,N)=7, blocks=15,798, gate_params=110,586
+  blocks.9.attn.proj: N=6, M=7, C(M,N)=7, blocks=5,266, gate_params=36,862
+  blocks.9.mlp.fc1: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.9.mlp.fc2: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.10.attn.qkv: N=6, M=7, C(M,N)=7, blocks=15,798, gate_params=110,586
+  blocks.10.attn.proj: N=6, M=7, C(M,N)=7, blocks=5,266, gate_params=36,862
+  blocks.10.mlp.fc1: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.10.mlp.fc2: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.11.attn.qkv: N=6, M=7, C(M,N)=7, blocks=15,798, gate_params=110,586
+  blocks.11.attn.proj: N=6, M=7, C(M,N)=7, blocks=5,266, gate_params=36,862
+  blocks.11.mlp.fc1: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  blocks.11.mlp.fc2: N=4, M=6, C(M,N)=15, blocks=24,576, gate_params=368,640
+  head: N=8, M=9, C(M,N)=9, blocks=213, gate_params=1,917
+  head_dist: N=8, M=9, C(M,N)=9, blocks=213, gate_params=1,917
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([15798, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([5266, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.6458
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.6562
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([15798, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([5266, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.6458
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.6562
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([15798, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([5266, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.6458
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.6562
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([15798, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([5266, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.6458
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.6562
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([15798, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([5266, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.6458
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.6562
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([15798, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([5266, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.6458
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.6562
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([15798, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([5266, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.6458
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.6562
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([15798, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([5266, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.6458
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.6562
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([15798, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([5266, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.6458
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.6562
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([15798, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([5266, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.6458
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.6562
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([15798, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([5266, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.6458
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.6562
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([15798, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.8438
+Block shape: torch.Size([5266, 7])
+initializing with prior (strength=3), Prior Sparsity: 0.6458
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.6562
+Block shape: torch.Size([24576, 15])
+initializing with prior (strength=3), Prior Sparsity: 0.0000
+Block shape: torch.Size([213, 9])
+initializing with prior (strength=3), Prior Sparsity: 0.0000
+Block shape: torch.Size([213, 9])
+[🔒] Freezing all parameters except .gate...
+[🎯] MaskLLM training: 10 epochs, lr=0.001
+[Epoch 0/10] tau=4.000, scaling=10.0
+[Epoch 0] Loss: 2.2103, Top-1: 21.02%, Top-5: 66.33%
+[Epoch 1/10] tau=3.561, scaling=20.0
+[Epoch 1] Loss: 2.0878, Top-1: 24.78%, Top-5: 74.31%
+[Epoch 2/10] tau=3.122, scaling=30.0
+[Epoch 2] Loss: 1.9932, Top-1: 28.64%, Top-5: 77.36%
+[Epoch 3/10] tau=2.683, scaling=40.0
+[Epoch 3] Loss: 1.8578, Top-1: 32.88%, Top-5: 84.05%
+[Epoch 4/10] tau=2.244, scaling=50.0
+[Epoch 4] Loss: 1.8408, Top-1: 33.29%, Top-5: 84.05%
+[Epoch 5/10] tau=1.806, scaling=60.0
+[Epoch 5] Loss: 1.8036, Top-1: 34.62%, Top-5: 85.54%
+[Epoch 6/10] tau=1.367, scaling=70.0
+[Epoch 6] Loss: 1.7853, Top-1: 35.14%, Top-5: 86.20%
+[Epoch 7/10] tau=0.928, scaling=80.0
+[Epoch 7] Loss: 1.7846, Top-1: 35.05%, Top-5: 85.98%
+[Epoch 8/10] tau=0.489, scaling=90.0
+[Epoch 8] Loss: 1.7800, Top-1: 35.56%, Top-5: 86.20%
+[Epoch 9/10] tau=0.050, scaling=100.0
+[Epoch 9] Loss: 1.7772, Top-1: 35.72%, Top-5: 86.58%
+[✅] MaskLLM training complete
+
+[Phase 3] Extracting learned masks...
+Replaced blocks.0.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.0.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.0.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.0.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.1.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.1.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.1.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.1.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.2.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.2.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.2.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.2.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.3.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.3.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.3.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.3.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.4.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.4.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.4.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.4.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.5.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.5.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.5.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.5.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.6.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.6.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.6.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.6.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.7.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.7.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.7.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.7.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.8.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.8.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.8.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.8.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.9.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.9.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.9.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.9.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.10.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.10.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.10.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.10.mlp.fc2: {'N': 4, 'M': 6}
+Replaced blocks.11.attn.qkv: {'N': 6, 'M': 7}
+Replaced blocks.11.attn.proj: {'N': 6, 'M': 7}
+Replaced blocks.11.mlp.fc1: {'N': 4, 'M': 6}
+Replaced blocks.11.mlp.fc2: {'N': 4, 'M': 6}
+Replaced head: {'N': 8, 'M': 9}
+Replaced head_dist: {'N': 8, 'M': 9}
+[📊] Frozen model (after training):
+  Total params:  5,528,660
+  Gate params removed: 10,620,570
+  Param reduction: 65.77% fewer than MaskLLM model
+[✅] Final model created with learned frozen masks
+  Final blocks.0.attn.qkv sparsity: 0.143
+  Final blocks.0.attn.proj sparsity: 0.143
+  Final blocks.0.mlp.fc1 sparsity: 0.333
+  Final blocks.0.mlp.fc2 sparsity: 0.333
+  Final blocks.1.attn.qkv sparsity: 0.143
+  Final blocks.1.attn.proj sparsity: 0.143
+  Final blocks.1.mlp.fc1 sparsity: 0.333
+  Final blocks.1.mlp.fc2 sparsity: 0.333
+  Final blocks.2.attn.qkv sparsity: 0.143
+  Final blocks.2.attn.proj sparsity: 0.143
+  Final blocks.2.mlp.fc1 sparsity: 0.333
+  Final blocks.2.mlp.fc2 sparsity: 0.333
+  Final blocks.3.attn.qkv sparsity: 0.143
+  Final blocks.3.attn.proj sparsity: 0.143
+  Final blocks.3.mlp.fc1 sparsity: 0.333
+  Final blocks.3.mlp.fc2 sparsity: 0.333
+  Final blocks.4.attn.qkv sparsity: 0.143
+  Final blocks.4.attn.proj sparsity: 0.143
+  Final blocks.4.mlp.fc1 sparsity: 0.333
+  Final blocks.4.mlp.fc2 sparsity: 0.333
+  Final blocks.5.attn.qkv sparsity: 0.143
+  Final blocks.5.attn.proj sparsity: 0.143
+  Final blocks.5.mlp.fc1 sparsity: 0.333
+  Final blocks.5.mlp.fc2 sparsity: 0.333
+  Final blocks.6.attn.qkv sparsity: 0.143
+  Final blocks.6.attn.proj sparsity: 0.143
+  Final blocks.6.mlp.fc1 sparsity: 0.333
+  Final blocks.6.mlp.fc2 sparsity: 0.333
+  Final blocks.7.attn.qkv sparsity: 0.143
+  Final blocks.7.attn.proj sparsity: 0.143
+  Final blocks.7.mlp.fc1 sparsity: 0.333
+  Final blocks.7.mlp.fc2 sparsity: 0.333
+  Final blocks.8.attn.qkv sparsity: 0.143
+  Final blocks.8.attn.proj sparsity: 0.143
+  Final blocks.8.mlp.fc1 sparsity: 0.333
+  Final blocks.8.mlp.fc2 sparsity: 0.333
+  Final blocks.9.attn.qkv sparsity: 0.143
+  Final blocks.9.attn.proj sparsity: 0.143
+  Final blocks.9.mlp.fc1 sparsity: 0.333
+  Final blocks.9.mlp.fc2 sparsity: 0.333
+  Final blocks.10.attn.qkv sparsity: 0.143
+  Final blocks.10.attn.proj sparsity: 0.143
+  Final blocks.10.mlp.fc1 sparsity: 0.333
+  Final blocks.10.mlp.fc2 sparsity: 0.333
+  Final blocks.11.attn.qkv sparsity: 0.143
+  Final blocks.11.attn.proj sparsity: 0.143
+  Final blocks.11.mlp.fc1 sparsity: 0.333
+  Final blocks.11.mlp.fc2 sparsity: 0.333
+  Final head sparsity: 0.111
+  Final head_dist sparsity: 0.111
+
+[Phase 4] Evaluating final MaskLLM model...
+[🎯] Zero-shot accuracy: 35.68%
+[📊] MaskLLM model accuracy: 35.68%
+[📊] MACs: 1.266G -> 0.565G (reduction: 55.3%)
+[💾] Saved MaskLLM checkpoint: /work/hdd/bfxa/dshah13/expf_cl/deit_tiny_distilled_patch16_224.fb_in1k_cifar10_macs0p62g/job_16217111/checkpoints/maskllm_deit_tiny_distilled_patch16_224.fb_in1k_cifar10_rev1.pth
+
+[📊] MaskLLM Pruning Results Summary:
+  MACs reduction: 55.34%
+  MaskLLM accuracy: 35.68%
+[⏱️] Completed: 4. Pruning Agent in 844.63s
+[✅] Achieved 0.565G MACs, meets target 620000000.000G (error: -8.8%)
+[🔧] Patched attention forward for blocks.0.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.1.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.2.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.3.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.4.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.5.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.6.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.7.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.8.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.9.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.10.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.11.attn (head_dim: 64)
+[💾] Stored pruned model in MODEL_STORE
+[✅] MACs WITHIN TOLERANCE:
+   Achieved: 0.565G vs Target: 0.620G
+   Error: -8.80% (tolerance: +1.0%/-20.0%)
+   Zero-shot accuracy: 35.68% - proceeding to fine-tune
+
+[🔄] cifar10 step received: dict_keys(['prune'])
+[🔄] Fine-tuning cifar10 model
+[⏱️] Starting: 5. Fine-tuning Agent
+
+[🔄] Starting REVISED CIFAR10 fine-tuning process...
+[💻] Fine-tuning on device: cuda
+[🔍] Model type: ViT
+[🔧] Using LR 0.0005 for 55.3% pruned model
+[🧮] Using AdamW optimizer for ViT
+[🎯] Simple fine-tuning: 30 epochs, LR 0.0005
+
+[📊] Epoch 1/30
+[🔄] Batch 0: Loss 1.903, Acc 32.81%
+[🔄] Batch 100: Loss 2.033, Acc 29.04%
+[🔄] Batch 200: Loss 1.708, Acc 31.45%
+[🔄] Batch 300: Loss 1.811, Acc 32.70%
+[📊] Validation: Accuracy 38.88%
+[✅] New best: 38.88%
+
+[📊] Epoch 2/30
+[🔄] Batch 0: Loss 1.714, Acc 35.16%
+[🔄] Batch 100: Loss 1.820, Acc 31.79%
+[🔄] Batch 200: Loss 1.682, Acc 34.15%
+[🔄] Batch 300: Loss 1.753, Acc 36.36%
+[📊] Validation: Accuracy 39.53%
+[✅] New best: 39.53%
+
+[📊] Epoch 3/30
+[🔄] Batch 0: Loss 1.811, Acc 35.16%
+[🔄] Batch 100: Loss 1.645, Acc 41.33%
+[🔄] Batch 200: Loss 1.504, Acc 43.17%
+[🔄] Batch 300: Loss 1.417, Acc 44.27%
+[📊] Validation: Accuracy 46.86%
+[✅] New best: 46.86%
+
+[📊] Epoch 4/30
+[🔄] Batch 0: Loss 1.475, Acc 48.44%
+[🔄] Batch 100: Loss 1.338, Acc 50.51%
+[🔄] Batch 200: Loss 1.340, Acc 51.26%
+[🔄] Batch 300: Loss 1.454, Acc 51.74%
+[📊] Validation: Accuracy 55.05%
+[✅] New best: 55.05%
+
+[📊] Epoch 5/30
+[🔄] Batch 0: Loss 1.549, Acc 52.34%
+[🔄] Batch 100: Loss 1.498, Acc 53.69%
+[🔄] Batch 200: Loss 1.477, Acc 54.57%
+[🔄] Batch 300: Loss 1.396, Acc 55.04%
+[📊] Validation: Accuracy 56.44%
+[✅] New best: 56.44%
+
+[📊] Epoch 6/30
+[🔄] Batch 0: Loss 1.346, Acc 53.91%
+[🔄] Batch 100: Loss 1.246, Acc 57.56%
+[🔄] Batch 200: Loss 1.274, Acc 58.12%
+[🔄] Batch 300: Loss 1.273, Acc 58.32%
+[📊] Validation: Accuracy 60.53%
+[✅] New best: 60.53%
+
+[📊] Epoch 7/30
+[🔄] Batch 0: Loss 1.178, Acc 64.84%
+[🔄] Batch 100: Loss 1.260, Acc 59.99%
+[🔄] Batch 200: Loss 1.111, Acc 60.70%
+[🔄] Batch 300: Loss 1.265, Acc 61.18%
+[📊] Validation: Accuracy 61.56%
+[✅] New best: 61.56%
+
+[📊] Epoch 8/30
+[🔄] Batch 0: Loss 1.239, Acc 59.38%
+[🔄] Batch 100: Loss 1.099, Acc 63.45%
+[🔄] Batch 200: Loss 1.182, Acc 63.53%
+[🔄] Batch 300: Loss 1.157, Acc 63.62%
+[📊] Validation: Accuracy 61.20%
+[📉] No improvement for 1/5 epochs (best: 61.56%)
+
+[📊] Epoch 9/30
+[🔄] Batch 0: Loss 1.151, Acc 63.28%
+[🔄] Batch 100: Loss 1.013, Acc 65.66%
+[🔄] Batch 200: Loss 1.037, Acc 65.59%
+[🔄] Batch 300: Loss 1.124, Acc 65.54%
+[📊] Validation: Accuracy 64.68%
+[✅] New best: 64.68%
+
+[📊] Epoch 10/30
+[🔄] Batch 0: Loss 1.279, Acc 56.25%
+[🔄] Batch 100: Loss 0.953, Acc 66.05%
+[🔄] Batch 200: Loss 1.142, Acc 66.31%
+[🔄] Batch 300: Loss 1.185, Acc 66.41%
+[📊] Validation: Accuracy 65.85%
+[✅] New best: 65.85%
+
+[📊] Epoch 11/30
+[🔄] Batch 0: Loss 1.099, Acc 64.06%
+[🔄] Batch 100: Loss 0.990, Acc 67.79%
+[🔄] Batch 200: Loss 1.064, Acc 67.95%
+[🔄] Batch 300: Loss 1.024, Acc 67.93%
+[📊] Validation: Accuracy 67.53%
+[✅] New best: 67.53%
+
+[📊] Epoch 12/30
+[🔄] Batch 0: Loss 0.994, Acc 71.09%
+[🔄] Batch 100: Loss 1.015, Acc 69.96%
+[🔄] Batch 200: Loss 0.851, Acc 69.99%
+[🔄] Batch 300: Loss 1.143, Acc 69.90%
+[📊] Validation: Accuracy 67.46%
+[📉] No improvement for 1/5 epochs (best: 67.53%)
+
+[📊] Epoch 13/30
+[🔄] Batch 0: Loss 0.993, Acc 70.31%
+[🔄] Batch 100: Loss 0.883, Acc 71.26%
+[🔄] Batch 200: Loss 1.152, Acc 71.17%
+[🔄] Batch 300: Loss 1.059, Acc 71.06%
+[📊] Validation: Accuracy 68.25%
+[✅] New best: 68.25%
+
+[📊] Epoch 14/30
+[🔄] Batch 0: Loss 1.226, Acc 62.50%
+[🔄] Batch 100: Loss 0.936, Acc 72.87%
+[🔄] Batch 200: Loss 1.130, Acc 72.68%
+[🔄] Batch 300: Loss 0.903, Acc 72.68%
+[📊] Validation: Accuracy 71.97%
+[✅] New best: 71.97%
+
+[📊] Epoch 15/30
+[🔄] Batch 0: Loss 0.905, Acc 72.66%
+[🔄] Batch 100: Loss 1.067, Acc 73.53%
+[🔄] Batch 200: Loss 0.939, Acc 73.66%
+[🔄] Batch 300: Loss 0.880, Acc 73.50%
+[📊] Validation: Accuracy 72.55%
+[✅] New best: 72.55%
+
+[📊] Epoch 16/30
+[🔄] Batch 0: Loss 0.983, Acc 74.22%
+[🔄] Batch 100: Loss 0.868, Acc 75.19%
+[🔄] Batch 200: Loss 0.860, Acc 75.17%
+[🔄] Batch 300: Loss 0.847, Acc 75.09%
+[📊] Validation: Accuracy 72.38%
+[📉] No improvement for 1/5 epochs (best: 72.55%)
+
+[📊] Epoch 17/30
+[🔄] Batch 0: Loss 0.961, Acc 73.44%
+[🔄] Batch 100: Loss 0.876, Acc 75.75%
+[🔄] Batch 200: Loss 0.717, Acc 75.94%
+[🔄] Batch 300: Loss 0.890, Acc 76.21%
+[📊] Validation: Accuracy 74.12%
+[✅] New best: 74.12%
+
+[📊] Epoch 18/30
+[🔄] Batch 0: Loss 0.917, Acc 70.31%
+[🔄] Batch 100: Loss 0.793, Acc 77.44%
+[🔄] Batch 200: Loss 0.748, Acc 77.53%
+[🔄] Batch 300: Loss 0.763, Acc 77.29%
+[📊] Validation: Accuracy 74.93%
+[✅] New best: 74.93%
+
+[📊] Epoch 19/30
+[🔄] Batch 0: Loss 0.835, Acc 78.91%
+[🔄] Batch 100: Loss 0.897, Acc 78.69%
+[🔄] Batch 200: Loss 0.961, Acc 78.74%
+[🔄] Batch 300: Loss 0.923, Acc 78.68%
+[📊] Validation: Accuracy 74.49%
+[📉] No improvement for 1/5 epochs (best: 74.93%)
+
+[📊] Epoch 20/30
+[🔄] Batch 0: Loss 0.768, Acc 78.91%
+[🔄] Batch 100: Loss 0.883, Acc 79.76%
+[🔄] Batch 200: Loss 0.845, Acc 79.91%
+[🔄] Batch 300: Loss 0.742, Acc 79.67%
+[📊] Validation: Accuracy 76.08%
+[✅] New best: 76.08%
+
+[📊] Epoch 21/30
+[🔄] Batch 0: Loss 0.721, Acc 82.81%
+[🔄] Batch 100: Loss 0.781, Acc 80.15%
+[🔄] Batch 200: Loss 0.791, Acc 80.49%
+[🔄] Batch 300: Loss 0.930, Acc 80.50%
+[📊] Validation: Accuracy 76.96%
+[✅] New best: 76.96%
+
+[📊] Epoch 22/30
+[🔄] Batch 0: Loss 0.693, Acc 84.38%
+[🔄] Batch 100: Loss 0.688, Acc 82.11%
+[🔄] Batch 200: Loss 0.832, Acc 81.91%
+[🔄] Batch 300: Loss 0.728, Acc 81.90%
+[📊] Validation: Accuracy 77.44%
+[✅] New best: 77.44%
+
+[📊] Epoch 23/30
+[🔄] Batch 0: Loss 0.882, Acc 75.78%
+[🔄] Batch 100: Loss 0.741, Acc 82.84%
+[🔄] Batch 200: Loss 0.850, Acc 82.99%
+[🔄] Batch 300: Loss 0.676, Acc 82.88%
+[📊] Validation: Accuracy 76.73%
+[📉] No improvement for 1/5 epochs (best: 77.44%)
+
+[📊] Epoch 24/30
+[🔄] Batch 0: Loss 0.862, Acc 75.78%
+[🔄] Batch 100: Loss 0.607, Acc 83.61%
+[🔄] Batch 200: Loss 0.692, Acc 83.76%
+[🔄] Batch 300: Loss 0.802, Acc 83.84%
+[📊] Validation: Accuracy 77.25%
+[📉] No improvement for 2/5 epochs (best: 77.44%)
+
+[📊] Epoch 25/30
+[🔄] Batch 0: Loss 0.710, Acc 83.59%
+[🔄] Batch 100: Loss 0.638, Acc 84.55%
+[🔄] Batch 200: Loss 0.809, Acc 84.88%
+[🔄] Batch 300: Loss 0.667, Acc 84.66%
+[📊] Validation: Accuracy 78.14%
+[✅] New best: 78.14%
+
+[📊] Epoch 26/30
+[🔄] Batch 0: Loss 0.710, Acc 84.38%
+[🔄] Batch 100: Loss 0.680, Acc 85.67%
+[🔄] Batch 200: Loss 0.667, Acc 85.58%
+[🔄] Batch 300: Loss 0.769, Acc 85.29%
+[📊] Validation: Accuracy 78.66%
+[✅] New best: 78.66%
+
+[📊] Epoch 27/30
+[🔄] Batch 0: Loss 0.626, Acc 87.50%
+[🔄] Batch 100: Loss 0.520, Acc 86.25%
+[🔄] Batch 200: Loss 0.636, Acc 85.95%
+[🔄] Batch 300: Loss 0.748, Acc 85.95%
+[📊] Validation: Accuracy 78.24%
+[📉] No improvement for 1/5 epochs (best: 78.66%)
+
+[📊] Epoch 28/30
+[🔄] Batch 0: Loss 0.696, Acc 85.16%
+[🔄] Batch 100: Loss 0.622, Acc 86.77%
+[🔄] Batch 200: Loss 0.522, Acc 86.61%
+[🔄] Batch 300: Loss 0.567, Acc 86.50%
+[📊] Validation: Accuracy 78.62%
+[📉] No improvement for 2/5 epochs (best: 78.66%)
+
+[📊] Epoch 29/30
+[🔄] Batch 0: Loss 0.591, Acc 87.50%
+[🔄] Batch 100: Loss 0.626, Acc 86.63%
+[🔄] Batch 200: Loss 0.607, Acc 86.43%
+[🔄] Batch 300: Loss 0.598, Acc 86.56%
+[📊] Validation: Accuracy 78.77%
+[✅] New best: 78.77%
+
+[📊] Epoch 30/30
+[🔄] Batch 0: Loss 0.568, Acc 89.84%
+[🔄] Batch 100: Loss 0.556, Acc 86.77%
+[🔄] Batch 200: Loss 0.589, Acc 86.83%
+[🔄] Batch 300: Loss 0.599, Acc 86.90%
+[📊] Validation: Accuracy 78.71%
+[📉] No improvement for 1/5 epochs (best: 78.77%)
+[🏆] Using best model with 78.77% accuracy
+
+[📈] Fine-tuning Results:
+  - Zero-shot: 35.68%
+  - Fine-tuned: 78.77%
+  - Improvement: 43.09%
+  - Status: ✅ SUCCESS
+[⏱️] Completed: 5. Fine-tuning Agent in 1763.52s
+
+[🔄] cifar10 step received: dict_keys(['fine_tune'])
+[🔄] Evaluating cifar10 model
+[⏱️] Starting: 6. Evaluation Agent
+
+[📊] Starting comprehensive CIFAR10 evaluation...
+[📊] Stored Zero-shot accuracy: 35.68%
+
+[🧪] Evaluating fine-tuned model on cifar10...
+[📋] Dimensions match - safe to reattach components
+[✅] Reattached head (dim: 192, strict=False)
+[✅] Reattached head_dist (dim: 192, strict=False)
+[✅] Reattached cls_token (shape: torch.Size([1, 1, 192]))
+[✅] Reattached dist_token (shape: torch.Size([1, 1, 192]))
+[✅] Reattached pos_embed (shape: torch.Size([1, 198, 192]))
+[📊] Fine-tuned model accuracy: 69.00%
+[📈] CORRECT Accuracy improvement: 33.32% (93.4% relative)
+
+[✅] CIFAR10 Evaluation Complete:
+  - Success: True
+  - MAC Achievement: 0.565G (target: 0.620G)
+  - MAC Efficiency: 44.7% of baseline (1.266G)
+  - MAC Error: -8.8% (allowed: -20.0%…+1.0%)
+  - Final Accuracy: 69.00% (threshold: 1.0%)
+  - Accuracy Improvement: 33.32%
+  - Overshoot tolerance: +6200000.000G (+1.0%)
+  - Undershoot tolerance: -124000000.000G (-20.0%)
+[⏱️] Completed: 6. Evaluation Agent in 9.21s
+
+[🔄] cifar10 step received: dict_keys(['evaluate'])
+[🔄] Profiling cifar10 model
+[🔄] Profiling after evaluation, revision 2 for cifar10
+[⏱️] Starting: 1. MAC-aware Profiling Agent
+[🔍] MAC Context: 1.266G → 0.620G (+1.0%/-20.0%)
+[✅] torch_pruning measured: 1.266 GMACs
+
+OpenRouter Response Status: 200
+[✅] MAC Target: 0.620G (49.0% efficiency)
+[⏱️] Completed: 1. MAC-aware Profiling Agent in 87.06s
+
+[🔄] cifar10 step received: dict_keys(['profile'])
+[🔄] Master Agent analyzing cifar10 strategy
+[🔍] Two-Phase MAC Search Status:
+   Current revision: 2
+   Candidate models found: 4
+   First success at revision: 0
+[🔍] Phase 2: Extended MAC search continuing... 19 trials remaining after this
+[📊] Candidates so far: 4
+[🔧] Decremented extended_search_remaining: 20 → 19
+✅ Initialized OpenRouter with model: meta-llama/llama-3.2-3b-instruct
+[🧠] MAC context: 1.266G → 0.620G (+1.0%/-20.0%)
+
+[🔄] cifar10 step received: dict_keys(['master'])
+[📋] Received general strategic guidance from Master Agent:
+   1. EXCELLENT MAC STRATEGY FOUND: 41.4% accuracy achieved
+   2. Strategy achieved 0.565G vs target 0.620G MAC
+[⏱️] Starting: 3. Enhanced Analysis Agent
+[🔧] Calculated target ratio from MACs: 0.510 (51.0%)
+[🔧] Calculated target ratio from MACs: 0.510 (51.0%)
+[🧠] ViT Analysis with Historical Learning (MACs-first):
+   Target ratio: 0.510 (user-specified)
+   Target MACs:  0.620G (baseline 1.266G, tolerance +1.0%/-20.0%)
+   Model: deit_tiny_distilled_patch16_224.fb_in1k
+   Revision: 2
+   History entries: 4
+[📋] GENERAL STRATEGIC GUIDANCE: Using guidance
+
+OpenRouter Response Status: 200
+[🧠] MaskLLM N:M learned from 4 attempts:
+   attn_nm: 5:7 (71.4% dense)
+   mlp_nm:  3:5 (60.0% dense)
+   Estimated MACs: 0.496G
+[✅] ViT strategy complete: general_strategic_guidance
+[✅] Using LLM strategy directly - no safety overrides
+[⏱️] Completed: 3. Enhanced Analysis Agent in 14.73s
+[🛡️] Safety validation completed for cifar10
+[✅] No safety corrections needed - Analysis Agent provided compliant parameters
+
+[🔄] cifar10 step received: dict_keys(['analyze'])
+[🔄] Executing cifar10 pruning
+[⏱️] Starting: 4. Pruning Agent
+
+[🔧] Executing dataset-aware pruning with Analysis Agent recommendations...
+
+[🔧] Starting MaskLLM pruning pipeline...
+[🎯] Using MACs-first approach, target ratio will be derived
+[📏] Using round-to value: None
+[🔧] Using conservative default cifar10 isomorphic ratios: {'qkv_multiplier': 0.25, 'mlp_multiplier': 0.5, 'proj_multiplier': 0.0, 'head_multiplier': 0.0}
+[🎯] Direct N:M patterns from agent: attn={'N': 5, 'M': 7}, mlp={'N': 3, 'M': 5}
+[💻] Using device: cuda
+[💾] Creating deep copy of unpruned original model before pruning...
+[✅] Original unpruned model stored in state for later reattachment.
+
+[Phase 1] SparseGPT Initialization...
+[📊] Base model: 5,528,660 params, 1.266G MACs
+[🔄] Calculated target ratio from MACs: 0.5103
+[⚠️] Ratio 0.5103 was previously attempted, but Analysis Agent suggested it again.
+[🔍] Found 12 transformer blocks
+[📊] Total model MACs: 1.266G
+[📊] Target MACs: 0.620G
+[📊] Target ratio: 0.510
+[🔍] Found 24 MLP layers (3,538,944 total params)
+[📊] MLP MAC fraction estimated: 0.666 (3,538,944/5,312,256 params)
+[🔍] Found 24 attention layers (1,769,472 total params)
+[📊] Attention MAC fraction estimated: 0.333 (1,769,472/5,312,256 params)
+[🪫] Max feasible reduction under caps: 0.990 → best achievable ≈ 0.013G
+[🎯] LLM suggests: mlp_pruning=0.500, attn_pruning=0.250
+[🎯] Using as pruning ratios: r_mlp=0.500, r_attn=0.250
+[🎯] Predicted achievement: 0.417 (target: 0.510)
+[⚖️] Post-alloc solve -> r_mlp=0.500, r_attn=0.250 (mlp_frac=0.667, attn_frac=0.333, caps: 0.99/0.99)
+[📊] MLP: 0.844G → 0.422G (ratio: 0.500)
+[📊] Attention: 0.422G → 0.316G (ratio: 0.250)
+[📊] Final group summary:
+  - MLP blocks: 12 couples
+  - Attention blocks: 12 couples
+  - Output projections: 0 layers
+Replaced blocks.0.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.0.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.0.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.0.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.1.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.1.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.1.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.1.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.2.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.2.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.2.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.2.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.3.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.3.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.3.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.3.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.4.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.4.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.4.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.4.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.5.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.5.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.5.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.5.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.6.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.6.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.6.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.6.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.7.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.7.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.7.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.7.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.8.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.8.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.8.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.8.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.9.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.9.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.9.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.9.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.10.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.10.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.10.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.10.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.11.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.11.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.11.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.11.mlp.fc2: {'N': 3, 'M': 5}
+Replaced head_dist: {'N': 8, 'M': 9}
+Ready.
+0 attn.qkv
+Pruning ...
+time 5.16
+error 119.17063903808594
+0 attn.proj
+Pruning ...
+time 0.08
+error 0.3416716158390045
+0 mlp.fc1
+Pruning ...
+time 0.08
+error 73.22335815429688
+0 mlp.fc2
+Pruning ...
+time 0.35
+error 1.3619725704193115
+1 attn.qkv
+Pruning ...
+time 0.08
+error 147.8599395751953
+1 attn.proj
+Pruning ...
+time 0.08
+error 0.7754573225975037
+1 mlp.fc1
+Pruning ...
+time 0.08
+error 91.97726440429688
+1 mlp.fc2
+Pruning ...
+time 0.32
+error 1.415235996246338
+2 attn.qkv
+Pruning ...
+time 0.08
+error 163.02960205078125
+2 attn.proj
+Pruning ...
+time 0.08
+error 0.4488680362701416
+2 mlp.fc1
+Pruning ...
+time 0.08
+error 98.0464859008789
+2 mlp.fc2
+Pruning ...
+time 0.33
+error 1.509406566619873
+3 attn.qkv
+Pruning ...
+time 0.08
+error 174.25970458984375
+3 attn.proj
+Pruning ...
+time 0.08
+error 0.5297456979751587
+3 mlp.fc1
+Pruning ...
+time 0.08
+error 106.11097717285156
+3 mlp.fc2
+Pruning ...
+time 0.33
+error 1.5914499759674072
+4 attn.qkv
+Pruning ...
+time 0.08
+error 186.01426696777344
+4 attn.proj
+Pruning ...
+time 0.08
+error 0.678911030292511
+4 mlp.fc1
+Pruning ...
+time 0.08
+error 107.66222381591797
+4 mlp.fc2
+Pruning ...
+time 0.33
+error 1.593970775604248
+5 attn.qkv
+Pruning ...
+time 0.08
+error 182.6044158935547
+5 attn.proj
+Pruning ...
+time 0.08
+error 0.7492520809173584
+5 mlp.fc1
+Pruning ...
+time 0.08
+error 112.64511108398438
+5 mlp.fc2
+Pruning ...
+time 0.33
+error 1.57822585105896
+6 attn.qkv
+Pruning ...
+time 0.08
+error 200.0171356201172
+6 attn.proj
+Pruning ...
+time 0.08
+error 0.7309651374816895
+6 mlp.fc1
+Pruning ...
+time 0.08
+error 115.108154296875
+6 mlp.fc2
+Pruning ...
+time 0.33
+error 1.7189018726348877
+7 attn.qkv
+Pruning ...
+time 0.08
+error 208.74891662597656
+7 attn.proj
+Pruning ...
+time 0.08
+error 0.6440150737762451
+7 mlp.fc1
+Pruning ...
+time 0.08
+error 120.18080139160156
+7 mlp.fc2
+Pruning ...
+time 0.33
+error 1.5996668338775635
+8 attn.qkv
+Pruning ...
+time 0.08
+error 204.7802734375
+8 attn.proj
+Pruning ...
+time 0.08
+error 0.7588746547698975
+8 mlp.fc1
+Pruning ...
+time 0.08
+error 123.46333312988281
+8 mlp.fc2
+Pruning ...
+time 0.33
+error 1.6078431606292725
+9 attn.qkv
+Pruning ...
+time 0.08
+error 210.49830627441406
+9 attn.proj
+Pruning ...
+time 0.08
+error 1.0218465328216553
+9 mlp.fc1
+Pruning ...
+time 0.08
+error 124.0023193359375
+9 mlp.fc2
+Pruning ...
+time 0.33
+error 1.7320582866668701
+10 attn.qkv
+Pruning ...
+time 0.08
+error 218.47238159179688
+10 attn.proj
+Pruning ...
+time 0.08
+error 0.6768161058425903
+10 mlp.fc1
+Pruning ...
+time 0.08
+error 124.3070297241211
+10 mlp.fc2
+Pruning ...
+time 0.33
+error 1.7653745412826538
+11 attn.qkv
+Pruning ...
+time 0.08
+error 212.37228393554688
+11 attn.proj
+Pruning ...
+time 0.08
+error 0.7314234972000122
+11 mlp.fc1
+Pruning ...
+time 0.08
+error 123.65743255615234
+11 mlp.fc2
+Pruning ...
+time 0.33
+error 1.756873369216919
+[✅] SparseGPT initialization complete
+  Layer blocks.0.attn.qkv sparsity: 0.703
+  Layer blocks.0.attn.proj sparsity: 0.703
+  Layer blocks.0.mlp.fc1 sparsity: 0.578
+  Layer blocks.0.mlp.fc2 sparsity: 0.586
+  Layer blocks.1.attn.qkv sparsity: 0.703
+  Layer blocks.1.attn.proj sparsity: 0.703
+  Layer blocks.1.mlp.fc1 sparsity: 0.578
+  Layer blocks.1.mlp.fc2 sparsity: 0.586
+  Layer blocks.2.attn.qkv sparsity: 0.703
+  Layer blocks.2.attn.proj sparsity: 0.703
+  Layer blocks.2.mlp.fc1 sparsity: 0.578
+  Layer blocks.2.mlp.fc2 sparsity: 0.586
+  Layer blocks.3.attn.qkv sparsity: 0.703
+  Layer blocks.3.attn.proj sparsity: 0.703
+  Layer blocks.3.mlp.fc1 sparsity: 0.578
+  Layer blocks.3.mlp.fc2 sparsity: 0.586
+  Layer blocks.4.attn.qkv sparsity: 0.703
+  Layer blocks.4.attn.proj sparsity: 0.703
+  Layer blocks.4.mlp.fc1 sparsity: 0.578
+  Layer blocks.4.mlp.fc2 sparsity: 0.586
+  Layer blocks.5.attn.qkv sparsity: 0.703
+  Layer blocks.5.attn.proj sparsity: 0.703
+  Layer blocks.5.mlp.fc1 sparsity: 0.578
+  Layer blocks.5.mlp.fc2 sparsity: 0.586
+  Layer blocks.6.attn.qkv sparsity: 0.703
+  Layer blocks.6.attn.proj sparsity: 0.703
+  Layer blocks.6.mlp.fc1 sparsity: 0.578
+  Layer blocks.6.mlp.fc2 sparsity: 0.586
+  Layer blocks.7.attn.qkv sparsity: 0.703
+  Layer blocks.7.attn.proj sparsity: 0.703
+  Layer blocks.7.mlp.fc1 sparsity: 0.578
+  Layer blocks.7.mlp.fc2 sparsity: 0.586
+  Layer blocks.8.attn.qkv sparsity: 0.703
+  Layer blocks.8.attn.proj sparsity: 0.703
+  Layer blocks.8.mlp.fc1 sparsity: 0.578
+  Layer blocks.8.mlp.fc2 sparsity: 0.586
+  Layer blocks.9.attn.qkv sparsity: 0.703
+  Layer blocks.9.attn.proj sparsity: 0.703
+  Layer blocks.9.mlp.fc1 sparsity: 0.578
+  Layer blocks.9.mlp.fc2 sparsity: 0.586
+  Layer blocks.10.attn.qkv sparsity: 0.703
+  Layer blocks.10.attn.proj sparsity: 0.703
+  Layer blocks.10.mlp.fc1 sparsity: 0.578
+  Layer blocks.10.mlp.fc2 sparsity: 0.586
+  Layer blocks.11.attn.qkv sparsity: 0.703
+  Layer blocks.11.attn.proj sparsity: 0.703
+  Layer blocks.11.mlp.fc1 sparsity: 0.578
+  Layer blocks.11.mlp.fc2 sparsity: 0.586
+  Layer head_dist sparsity: 0.000
+
+[Phase 2] MaskLLM Mask Learning...
+Replaced blocks.0.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.0.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.0.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.0.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.1.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.1.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.1.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.1.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.2.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.2.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.2.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.2.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.3.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.3.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.3.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.3.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.4.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.4.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.4.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.4.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.5.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.5.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.5.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.5.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.6.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.6.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.6.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.6.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.7.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.7.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.7.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.7.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.8.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.8.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.8.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.8.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.9.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.9.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.9.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.9.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.10.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.10.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.10.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.10.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.11.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.11.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.11.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.11.mlp.fc2: {'N': 3, 'M': 5}
+Replaced head: {'N': 8, 'M': 9}
+Replaced head_dist: {'N': 8, 'M': 9}
+[📊] MaskLLM model (before training):
+  Total params:  17,918,462
+  Weight params: 5,528,660
+  Gate params:   12,389,802 (69.15%)
+  blocks.0.attn.qkv: N=5, M=7, C(M,N)=21, blocks=15,798, gate_params=331,758
+  blocks.0.attn.proj: N=5, M=7, C(M,N)=21, blocks=5,266, gate_params=110,586
+  blocks.0.mlp.fc1: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.0.mlp.fc2: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.1.attn.qkv: N=5, M=7, C(M,N)=21, blocks=15,798, gate_params=331,758
+  blocks.1.attn.proj: N=5, M=7, C(M,N)=21, blocks=5,266, gate_params=110,586
+  blocks.1.mlp.fc1: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.1.mlp.fc2: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.2.attn.qkv: N=5, M=7, C(M,N)=21, blocks=15,798, gate_params=331,758
+  blocks.2.attn.proj: N=5, M=7, C(M,N)=21, blocks=5,266, gate_params=110,586
+  blocks.2.mlp.fc1: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.2.mlp.fc2: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.3.attn.qkv: N=5, M=7, C(M,N)=21, blocks=15,798, gate_params=331,758
+  blocks.3.attn.proj: N=5, M=7, C(M,N)=21, blocks=5,266, gate_params=110,586
+  blocks.3.mlp.fc1: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.3.mlp.fc2: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.4.attn.qkv: N=5, M=7, C(M,N)=21, blocks=15,798, gate_params=331,758
+  blocks.4.attn.proj: N=5, M=7, C(M,N)=21, blocks=5,266, gate_params=110,586
+  blocks.4.mlp.fc1: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.4.mlp.fc2: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.5.attn.qkv: N=5, M=7, C(M,N)=21, blocks=15,798, gate_params=331,758
+  blocks.5.attn.proj: N=5, M=7, C(M,N)=21, blocks=5,266, gate_params=110,586
+  blocks.5.mlp.fc1: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.5.mlp.fc2: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.6.attn.qkv: N=5, M=7, C(M,N)=21, blocks=15,798, gate_params=331,758
+  blocks.6.attn.proj: N=5, M=7, C(M,N)=21, blocks=5,266, gate_params=110,586
+  blocks.6.mlp.fc1: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.6.mlp.fc2: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.7.attn.qkv: N=5, M=7, C(M,N)=21, blocks=15,798, gate_params=331,758
+  blocks.7.attn.proj: N=5, M=7, C(M,N)=21, blocks=5,266, gate_params=110,586
+  blocks.7.mlp.fc1: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.7.mlp.fc2: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.8.attn.qkv: N=5, M=7, C(M,N)=21, blocks=15,798, gate_params=331,758
+  blocks.8.attn.proj: N=5, M=7, C(M,N)=21, blocks=5,266, gate_params=110,586
+  blocks.8.mlp.fc1: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.8.mlp.fc2: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.9.attn.qkv: N=5, M=7, C(M,N)=21, blocks=15,798, gate_params=331,758
+  blocks.9.attn.proj: N=5, M=7, C(M,N)=21, blocks=5,266, gate_params=110,586
+  blocks.9.mlp.fc1: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.9.mlp.fc2: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.10.attn.qkv: N=5, M=7, C(M,N)=21, blocks=15,798, gate_params=331,758
+  blocks.10.attn.proj: N=5, M=7, C(M,N)=21, blocks=5,266, gate_params=110,586
+  blocks.10.mlp.fc1: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.10.mlp.fc2: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.11.attn.qkv: N=5, M=7, C(M,N)=21, blocks=15,798, gate_params=331,758
+  blocks.11.attn.proj: N=5, M=7, C(M,N)=21, blocks=5,266, gate_params=110,586
+  blocks.11.mlp.fc1: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.11.mlp.fc2: N=3, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  head: N=8, M=9, C(M,N)=9, blocks=213, gate_params=1,917
+  head_dist: N=8, M=9, C(M,N)=9, blocks=213, gate_params=1,917
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([15798, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([5266, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5859
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([15798, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([5266, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5859
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([15798, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([5266, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5859
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([15798, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([5266, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5859
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([15798, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([5266, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5859
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([15798, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([5266, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5859
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([15798, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([5266, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5859
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([15798, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([5266, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5859
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([15798, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([5266, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5859
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([15798, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([5266, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5859
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([15798, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([5266, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5859
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([15798, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.7031
+Block shape: torch.Size([5266, 21])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5859
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.0000
+Block shape: torch.Size([213, 9])
+initializing with prior (strength=3), Prior Sparsity: 0.0000
+Block shape: torch.Size([213, 9])
+[🔒] Freezing all parameters except .gate...
+[🎯] MaskLLM training: 10 epochs, lr=0.001
+[Epoch 0/10] tau=4.000, scaling=10.0
+[Epoch 0] Loss: 2.1230, Top-1: 24.49%, Top-5: 74.79%
+[Epoch 1/10] tau=3.561, scaling=20.0
+[Epoch 1] Loss: 1.9971, Top-1: 28.56%, Top-5: 80.47%
+[Epoch 2/10] tau=3.122, scaling=30.0
+[Epoch 2] Loss: 1.8885, Top-1: 29.99%, Top-5: 83.26%
+[Epoch 3/10] tau=2.683, scaling=40.0
+[Epoch 3] Loss: 1.7679, Top-1: 35.14%, Top-5: 86.98%
+[Epoch 4/10] tau=2.244, scaling=50.0
+[Epoch 4] Loss: 1.7913, Top-1: 34.94%, Top-5: 86.00%
+[Epoch 5/10] tau=1.806, scaling=60.0
+[Epoch 5] Loss: 1.7207, Top-1: 38.80%, Top-5: 87.61%
+[Epoch 6/10] tau=1.367, scaling=70.0
+[Epoch 6] Loss: 1.7147, Top-1: 38.78%, Top-5: 87.85%
+[Epoch 7/10] tau=0.928, scaling=80.0
+[Epoch 7] Loss: 1.7083, Top-1: 38.78%, Top-5: 87.89%
+[Epoch 8/10] tau=0.489, scaling=90.0
+[Epoch 8] Loss: 1.7088, Top-1: 39.06%, Top-5: 88.02%
+[Epoch 9/10] tau=0.050, scaling=100.0
+[Epoch 9] Loss: 1.7034, Top-1: 39.28%, Top-5: 88.19%
+[✅] MaskLLM training complete
+
+[Phase 3] Extracting learned masks...
+Replaced blocks.0.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.0.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.0.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.0.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.1.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.1.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.1.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.1.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.2.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.2.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.2.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.2.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.3.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.3.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.3.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.3.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.4.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.4.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.4.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.4.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.5.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.5.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.5.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.5.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.6.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.6.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.6.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.6.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.7.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.7.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.7.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.7.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.8.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.8.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.8.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.8.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.9.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.9.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.9.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.9.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.10.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.10.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.10.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.10.mlp.fc2: {'N': 3, 'M': 5}
+Replaced blocks.11.attn.qkv: {'N': 5, 'M': 7}
+Replaced blocks.11.attn.proj: {'N': 5, 'M': 7}
+Replaced blocks.11.mlp.fc1: {'N': 3, 'M': 5}
+Replaced blocks.11.mlp.fc2: {'N': 3, 'M': 5}
+Replaced head: {'N': 8, 'M': 9}
+Replaced head_dist: {'N': 8, 'M': 9}
+[📊] Frozen model (after training):
+  Total params:  5,528,660
+  Gate params removed: 12,389,802
+  Param reduction: 69.15% fewer than MaskLLM model
+[✅] Final model created with learned frozen masks
+  Final blocks.0.attn.qkv sparsity: 0.286
+  Final blocks.0.attn.proj sparsity: 0.286
+  Final blocks.0.mlp.fc1 sparsity: 0.400
+  Final blocks.0.mlp.fc2 sparsity: 0.400
+  Final blocks.1.attn.qkv sparsity: 0.286
+  Final blocks.1.attn.proj sparsity: 0.286
+  Final blocks.1.mlp.fc1 sparsity: 0.400
+  Final blocks.1.mlp.fc2 sparsity: 0.400
+  Final blocks.2.attn.qkv sparsity: 0.286
+  Final blocks.2.attn.proj sparsity: 0.286
+  Final blocks.2.mlp.fc1 sparsity: 0.400
+  Final blocks.2.mlp.fc2 sparsity: 0.400
+  Final blocks.3.attn.qkv sparsity: 0.286
+  Final blocks.3.attn.proj sparsity: 0.286
+  Final blocks.3.mlp.fc1 sparsity: 0.400
+  Final blocks.3.mlp.fc2 sparsity: 0.400
+  Final blocks.4.attn.qkv sparsity: 0.286
+  Final blocks.4.attn.proj sparsity: 0.286
+  Final blocks.4.mlp.fc1 sparsity: 0.400
+  Final blocks.4.mlp.fc2 sparsity: 0.400
+  Final blocks.5.attn.qkv sparsity: 0.286
+  Final blocks.5.attn.proj sparsity: 0.286
+  Final blocks.5.mlp.fc1 sparsity: 0.400
+  Final blocks.5.mlp.fc2 sparsity: 0.400
+  Final blocks.6.attn.qkv sparsity: 0.286
+  Final blocks.6.attn.proj sparsity: 0.286
+  Final blocks.6.mlp.fc1 sparsity: 0.400
+  Final blocks.6.mlp.fc2 sparsity: 0.400
+  Final blocks.7.attn.qkv sparsity: 0.286
+  Final blocks.7.attn.proj sparsity: 0.286
+  Final blocks.7.mlp.fc1 sparsity: 0.400
+  Final blocks.7.mlp.fc2 sparsity: 0.400
+  Final blocks.8.attn.qkv sparsity: 0.286
+  Final blocks.8.attn.proj sparsity: 0.286
+  Final blocks.8.mlp.fc1 sparsity: 0.400
+  Final blocks.8.mlp.fc2 sparsity: 0.400
+  Final blocks.9.attn.qkv sparsity: 0.286
+  Final blocks.9.attn.proj sparsity: 0.286
+  Final blocks.9.mlp.fc1 sparsity: 0.400
+  Final blocks.9.mlp.fc2 sparsity: 0.400
+  Final blocks.10.attn.qkv sparsity: 0.286
+  Final blocks.10.attn.proj sparsity: 0.286
+  Final blocks.10.mlp.fc1 sparsity: 0.400
+  Final blocks.10.mlp.fc2 sparsity: 0.400
+  Final blocks.11.attn.qkv sparsity: 0.286
+  Final blocks.11.attn.proj sparsity: 0.286
+  Final blocks.11.mlp.fc1 sparsity: 0.400
+  Final blocks.11.mlp.fc2 sparsity: 0.400
+  Final head sparsity: 0.111
+  Final head_dist sparsity: 0.111
+
+[Phase 4] Evaluating final MaskLLM model...
+[🎯] Zero-shot accuracy: 39.26%
+[📊] MaskLLM model accuracy: 39.26%
+[📊] MACs: 1.266G -> 0.565G (reduction: 55.3%)
+[💾] Saved MaskLLM checkpoint: /work/hdd/bfxa/dshah13/expf_cl/deit_tiny_distilled_patch16_224.fb_in1k_cifar10_macs0p62g/job_16217111/checkpoints/maskllm_deit_tiny_distilled_patch16_224.fb_in1k_cifar10_rev2.pth
+
+[📊] MaskLLM Pruning Results Summary:
+  MACs reduction: 55.34%
+  MaskLLM accuracy: 39.26%
+[⏱️] Completed: 4. Pruning Agent in 860.55s
+[✅] Achieved 0.565G MACs, meets target 620000000.000G (error: -8.8%)
+[🔧] Patched attention forward for blocks.0.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.1.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.2.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.3.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.4.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.5.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.6.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.7.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.8.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.9.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.10.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.11.attn (head_dim: 64)
+[💾] Stored pruned model in MODEL_STORE
+[✅] MACs WITHIN TOLERANCE:
+   Achieved: 0.565G vs Target: 0.620G
+   Error: -8.80% (tolerance: +1.0%/-20.0%)
+   Zero-shot accuracy: 39.26% - proceeding to fine-tune
+
+[🔄] cifar10 step received: dict_keys(['prune'])
+[🔄] Fine-tuning cifar10 model
+[⏱️] Starting: 5. Fine-tuning Agent
+
+[🔄] Starting REVISED CIFAR10 fine-tuning process...
+[💻] Fine-tuning on device: cuda
+[🔍] Model type: ViT
+[🔧] Using LR 0.0005 for 55.3% pruned model
+[🧮] Using AdamW optimizer for ViT
+[🎯] Simple fine-tuning: 30 epochs, LR 0.0005
+
+[📊] Epoch 1/30
+[🔄] Batch 0: Loss 1.786, Acc 37.50%
+[🔄] Batch 100: Loss 1.753, Acc 31.98%
+[🔄] Batch 200: Loss 1.897, Acc 34.38%
+[🔄] Batch 300: Loss 1.819, Acc 35.32%
+[📊] Validation: Accuracy 36.83%
+[✅] New best: 36.83%
+
+[📊] Epoch 2/30
+[🔄] Batch 0: Loss 1.560, Acc 38.28%
+[🔄] Batch 100: Loss 1.721, Acc 30.86%
+[🔄] Batch 200: Loss 1.843, Acc 32.97%
+[🔄] Batch 300: Loss 1.537, Acc 34.85%
+[📊] Validation: Accuracy 42.20%
+[✅] New best: 42.20%
+
+[📊] Epoch 3/30
+[🔄] Batch 0: Loss 1.593, Acc 46.09%
+[🔄] Batch 100: Loss 1.641, Acc 42.46%
+[🔄] Batch 200: Loss 1.534, Acc 43.21%
+[🔄] Batch 300: Loss 1.546, Acc 44.48%
+[📊] Validation: Accuracy 50.69%
+[✅] New best: 50.69%
+
+[📊] Epoch 4/30
+[🔄] Batch 0: Loss 1.578, Acc 49.22%
+[🔄] Batch 100: Loss 1.495, Acc 50.17%
+[🔄] Batch 200: Loss 1.376, Acc 50.77%
+[🔄] Batch 300: Loss 1.427, Acc 51.35%
+[📊] Validation: Accuracy 52.13%
+[✅] New best: 52.13%
+
+[📊] Epoch 5/30
+[🔄] Batch 0: Loss 1.332, Acc 56.25%
+[🔄] Batch 100: Loss 1.177, Acc 55.71%
+[🔄] Batch 200: Loss 1.297, Acc 56.03%
+[🔄] Batch 300: Loss 1.147, Acc 56.09%
+[📊] Validation: Accuracy 57.64%
+[✅] New best: 57.64%
+
+[📊] Epoch 6/30
+[🔄] Batch 0: Loss 1.188, Acc 60.16%
+[🔄] Batch 100: Loss 1.284, Acc 58.97%
+[🔄] Batch 200: Loss 1.323, Acc 59.06%
+[🔄] Batch 300: Loss 1.220, Acc 59.22%
+[📊] Validation: Accuracy 59.19%
+[✅] New best: 59.19%
+
+[📊] Epoch 7/30
+[🔄] Batch 0: Loss 1.104, Acc 67.19%
+[🔄] Batch 100: Loss 1.237, Acc 60.86%
+[🔄] Batch 200: Loss 1.226, Acc 61.25%
+[🔄] Batch 300: Loss 1.344, Acc 61.67%
+[📊] Validation: Accuracy 62.02%
+[✅] New best: 62.02%
+
+[📊] Epoch 8/30
+[🔄] Batch 0: Loss 1.080, Acc 68.75%
+[🔄] Batch 100: Loss 1.087, Acc 63.54%
+[🔄] Batch 200: Loss 1.293, Acc 63.78%
+[🔄] Batch 300: Loss 1.229, Acc 63.74%
+[📊] Validation: Accuracy 62.54%
+[✅] New best: 62.54%
+
+[📊] Epoch 9/30
+[🔄] Batch 0: Loss 1.165, Acc 66.41%
+[🔄] Batch 100: Loss 1.063, Acc 65.65%
+[🔄] Batch 200: Loss 1.102, Acc 65.63%
+[🔄] Batch 300: Loss 1.159, Acc 65.41%
+[📊] Validation: Accuracy 66.91%
+[✅] New best: 66.91%
+
+[📊] Epoch 10/30
+[🔄] Batch 0: Loss 1.180, Acc 66.41%
+[🔄] Batch 100: Loss 1.050, Acc 67.03%
+[🔄] Batch 200: Loss 1.058, Acc 66.76%
+[🔄] Batch 300: Loss 1.081, Acc 66.79%
+[📊] Validation: Accuracy 67.04%
+[✅] New best: 67.04%
+
+[📊] Epoch 11/30
+[🔄] Batch 0: Loss 0.927, Acc 77.34%
+[🔄] Batch 100: Loss 1.125, Acc 68.43%
+[🔄] Batch 200: Loss 0.941, Acc 68.57%
+[🔄] Batch 300: Loss 1.169, Acc 68.64%
+[📊] Validation: Accuracy 68.94%
+[✅] New best: 68.94%
+
+[📊] Epoch 12/30
+[🔄] Batch 0: Loss 1.044, Acc 66.41%
+[🔄] Batch 100: Loss 0.976, Acc 70.49%
+[🔄] Batch 200: Loss 1.109, Acc 70.39%
+[🔄] Batch 300: Loss 0.988, Acc 70.15%
+[📊] Validation: Accuracy 69.95%
+[✅] New best: 69.95%
+
+[📊] Epoch 13/30
+[🔄] Batch 0: Loss 0.887, Acc 71.88%
+[🔄] Batch 100: Loss 1.015, Acc 72.69%
+[🔄] Batch 200: Loss 0.978, Acc 72.06%
+[🔄] Batch 300: Loss 0.921, Acc 71.82%
+[📊] Validation: Accuracy 70.24%
+[✅] New best: 70.24%
+
+[📊] Epoch 14/30
+[🔄] Batch 0: Loss 1.109, Acc 65.62%
+[🔄] Batch 100: Loss 0.835, Acc 72.58%
+[🔄] Batch 200: Loss 0.800, Acc 72.77%
+[🔄] Batch 300: Loss 0.967, Acc 72.80%
+[📊] Validation: Accuracy 73.27%
+[✅] New best: 73.27%
+
+[📊] Epoch 15/30
+[🔄] Batch 0: Loss 0.940, Acc 71.88%
+[🔄] Batch 100: Loss 0.914, Acc 74.74%
+[🔄] Batch 200: Loss 0.927, Acc 74.34%
+[🔄] Batch 300: Loss 0.855, Acc 74.35%
+[📊] Validation: Accuracy 72.39%
+[📉] No improvement for 1/5 epochs (best: 73.27%)
+
+[📊] Epoch 16/30
+[🔄] Batch 0: Loss 0.979, Acc 68.75%
+[🔄] Batch 100: Loss 0.810, Acc 75.36%
+[🔄] Batch 200: Loss 0.759, Acc 75.58%
+[🔄] Batch 300: Loss 0.902, Acc 75.51%
+[📊] Validation: Accuracy 73.65%
+[✅] New best: 73.65%
+
+[📊] Epoch 17/30
+[🔄] Batch 0: Loss 0.842, Acc 76.56%
+[🔄] Batch 100: Loss 0.866, Acc 77.01%
+[🔄] Batch 200: Loss 0.905, Acc 76.84%
+[🔄] Batch 300: Loss 0.834, Acc 76.94%
+[📊] Validation: Accuracy 74.94%
+[✅] New best: 74.94%
+
+[📊] Epoch 18/30
+[🔄] Batch 0: Loss 0.822, Acc 78.12%
+[🔄] Batch 100: Loss 0.752, Acc 77.82%
+[🔄] Batch 200: Loss 0.852, Acc 78.14%
+[🔄] Batch 300: Loss 0.777, Acc 78.10%
+[📊] Validation: Accuracy 75.29%
+[✅] New best: 75.29%
+
+[📊] Epoch 19/30
+[🔄] Batch 0: Loss 0.631, Acc 87.50%
+[🔄] Batch 100: Loss 0.819, Acc 79.32%
+[🔄] Batch 200: Loss 0.818, Acc 79.14%
+[🔄] Batch 300: Loss 0.945, Acc 79.36%
+[📊] Validation: Accuracy 76.07%
+[✅] New best: 76.07%
+
+[📊] Epoch 20/30
+[🔄] Batch 0: Loss 0.754, Acc 82.03%
+[🔄] Batch 100: Loss 0.740, Acc 80.21%
+[🔄] Batch 200: Loss 0.808, Acc 80.13%
+[🔄] Batch 300: Loss 0.760, Acc 80.22%
+[📊] Validation: Accuracy 76.10%
+[✅] New best: 76.10%
+
+[📊] Epoch 21/30
+[🔄] Batch 0: Loss 0.794, Acc 78.91%
+[🔄] Batch 100: Loss 0.796, Acc 81.49%
+[🔄] Batch 200: Loss 0.676, Acc 81.52%
+[🔄] Batch 300: Loss 0.557, Acc 81.41%
+[📊] Validation: Accuracy 77.09%
+[✅] New best: 77.09%
+
+[📊] Epoch 22/30
+[🔄] Batch 0: Loss 0.776, Acc 78.91%
+[🔄] Batch 100: Loss 0.750, Acc 82.74%
+[🔄] Batch 200: Loss 0.843, Acc 82.29%
+[🔄] Batch 300: Loss 0.785, Acc 82.06%
+[📊] Validation: Accuracy 76.95%
+[📉] No improvement for 1/5 epochs (best: 77.09%)
+
+[📊] Epoch 23/30
+[🔄] Batch 0: Loss 0.694, Acc 83.59%
+[🔄] Batch 100: Loss 0.631, Acc 83.32%
+[🔄] Batch 200: Loss 0.714, Acc 83.59%
+[🔄] Batch 300: Loss 0.797, Acc 83.64%
+[📊] Validation: Accuracy 77.58%
+[✅] New best: 77.58%
+
+[📊] Epoch 24/30
+[🔄] Batch 0: Loss 0.686, Acc 83.59%
+[🔄] Batch 100: Loss 0.729, Acc 84.62%
+[🔄] Batch 200: Loss 0.632, Acc 84.24%
+[🔄] Batch 300: Loss 0.640, Acc 84.15%
+[📊] Validation: Accuracy 78.49%
+[✅] New best: 78.49%
+
+[📊] Epoch 25/30
+[🔄] Batch 0: Loss 0.631, Acc 85.94%
+[🔄] Batch 100: Loss 0.735, Acc 85.47%
+[🔄] Batch 200: Loss 0.627, Acc 85.16%
+[🔄] Batch 300: Loss 0.744, Acc 84.90%
+[📊] Validation: Accuracy 78.69%
+[✅] New best: 78.69%
+
+[📊] Epoch 26/30
+[🔄] Batch 0: Loss 0.677, Acc 81.25%
+[🔄] Batch 100: Loss 0.617, Acc 86.05%
+[🔄] Batch 200: Loss 0.644, Acc 85.91%
+[🔄] Batch 300: Loss 0.634, Acc 85.95%
+[📊] Validation: Accuracy 78.69%
+[📉] No improvement for 1/5 epochs (best: 78.69%)
+
+[📊] Epoch 27/30
+[🔄] Batch 0: Loss 0.609, Acc 86.72%
+[🔄] Batch 100: Loss 0.651, Acc 86.86%
+[🔄] Batch 200: Loss 0.665, Acc 86.48%
+[🔄] Batch 300: Loss 0.697, Acc 86.35%
+[📊] Validation: Accuracy 78.62%
+[📉] No improvement for 2/5 epochs (best: 78.69%)
+
+[📊] Epoch 28/30
+[🔄] Batch 0: Loss 0.715, Acc 82.81%
+[🔄] Batch 100: Loss 0.710, Acc 87.26%
+[🔄] Batch 200: Loss 0.564, Acc 87.14%
+[🔄] Batch 300: Loss 0.635, Acc 87.05%
+[📊] Validation: Accuracy 78.89%
+[✅] New best: 78.89%
+
+[📊] Epoch 29/30
+[🔄] Batch 0: Loss 0.684, Acc 82.03%
+[🔄] Batch 100: Loss 0.505, Acc 86.75%
+[🔄] Batch 200: Loss 0.632, Acc 87.13%
+[🔄] Batch 300: Loss 0.617, Acc 87.30%
+[📊] Validation: Accuracy 79.26%
+[✅] New best: 79.26%
+
+[📊] Epoch 30/30
+[🔄] Batch 0: Loss 0.499, Acc 91.41%
+[🔄] Batch 100: Loss 0.591, Acc 88.37%
+[🔄] Batch 200: Loss 0.583, Acc 87.87%
+[🔄] Batch 300: Loss 0.711, Acc 87.45%
+[📊] Validation: Accuracy 79.08%
+[📉] No improvement for 1/5 epochs (best: 79.26%)
+[🏆] Using best model with 79.26% accuracy
+
+[📈] Fine-tuning Results:
+  - Zero-shot: 39.26%
+  - Fine-tuned: 79.26%
+  - Improvement: 40.00%
+  - Status: ✅ SUCCESS
+[⏱️] Completed: 5. Fine-tuning Agent in 1778.47s
+
+[🔄] cifar10 step received: dict_keys(['fine_tune'])
+[🔄] Evaluating cifar10 model
+[⏱️] Starting: 6. Evaluation Agent
+
+[📊] Starting comprehensive CIFAR10 evaluation...
+[📊] Stored Zero-shot accuracy: 39.26%
+
+[🧪] Evaluating fine-tuned model on cifar10...
+[📋] Dimensions match - safe to reattach components
+[✅] Reattached head (dim: 192, strict=False)
+[✅] Reattached head_dist (dim: 192, strict=False)
+[✅] Reattached cls_token (shape: torch.Size([1, 1, 192]))
+[✅] Reattached dist_token (shape: torch.Size([1, 1, 192]))
+[✅] Reattached pos_embed (shape: torch.Size([1, 198, 192]))
+[📊] Fine-tuned model accuracy: 68.47%
+[📈] CORRECT Accuracy improvement: 29.21% (74.4% relative)
+
+[✅] CIFAR10 Evaluation Complete:
+  - Success: True
+  - MAC Achievement: 0.565G (target: 0.620G)
+  - MAC Efficiency: 44.7% of baseline (1.266G)
+  - MAC Error: -8.8% (allowed: -20.0%…+1.0%)
+  - Final Accuracy: 68.47% (threshold: 1.0%)
+  - Accuracy Improvement: 29.21%
+  - Overshoot tolerance: +6200000.000G (+1.0%)
+  - Undershoot tolerance: -124000000.000G (-20.0%)
+[⏱️] Completed: 6. Evaluation Agent in 16.88s
+
+[🔄] cifar10 step received: dict_keys(['evaluate'])
+[🔄] Profiling cifar10 model
+[🔄] Profiling after evaluation, revision 3 for cifar10
+[⏱️] Starting: 1. MAC-aware Profiling Agent
+[🔍] MAC Context: 1.266G → 0.620G (+1.0%/-20.0%)
+[✅] torch_pruning measured: 1.266 GMACs
+
+OpenRouter Response Status: 200
+[✅] MAC Target: 0.620G (49.0% efficiency)
+[⏱️] Completed: 1. MAC-aware Profiling Agent in 29.54s
+
+[🔄] cifar10 step received: dict_keys(['profile'])
+[🔄] Master Agent analyzing cifar10 strategy
+[🔍] Two-Phase MAC Search Status:
+   Current revision: 3
+   Candidate models found: 6
+   First success at revision: 0
+[🔍] Phase 2: Extended MAC search continuing... 18 trials remaining after this
+[📊] Candidates so far: 6
+[🔧] Decremented extended_search_remaining: 19 → 18
+✅ Initialized OpenRouter with model: meta-llama/llama-3.2-3b-instruct
+[🧠] MAC context: 1.266G → 0.620G (+1.0%/-20.0%)
+
+[🔄] cifar10 step received: dict_keys(['master'])
+[📋] Received general strategic guidance from Master Agent:
+   1. EXCELLENT MAC STRATEGY FOUND: 41.4% accuracy achieved
+   2. Strategy achieved 0.565G vs target 0.620G MAC
+[⏱️] Starting: 3. Enhanced Analysis Agent
+[🔧] Calculated target ratio from MACs: 0.510 (51.0%)
+[🔧] Calculated target ratio from MACs: 0.510 (51.0%)
+[🧠] ViT Analysis with Historical Learning (MACs-first):
+   Target ratio: 0.510 (user-specified)
+   Target MACs:  0.620G (baseline 1.266G, tolerance +1.0%/-20.0%)
+   Model: deit_tiny_distilled_patch16_224.fb_in1k
+   Revision: 3
+   History entries: 6
+[📋] GENERAL STRATEGIC GUIDANCE: Using guidance
+
+OpenRouter Response Status: 200
+[🧠] MaskLLM N:M learned from 6 attempts:
+   attn_nm: 3:5 (60.0% dense)
+   mlp_nm:  2:5 (40.0% dense)
+   Estimated MACs: 0.496G
+[✅] ViT strategy complete: general_strategic_guidance
+[✅] Using LLM strategy directly - no safety overrides
+[⏱️] Completed: 3. Enhanced Analysis Agent in 8.37s
+[🛡️] Safety validation completed for cifar10
+[✅] No safety corrections needed - Analysis Agent provided compliant parameters
+
+[🔄] cifar10 step received: dict_keys(['analyze'])
+[🔄] Executing cifar10 pruning
+[⏱️] Starting: 4. Pruning Agent
+
+[🔧] Executing dataset-aware pruning with Analysis Agent recommendations...
+
+[🔧] Starting MaskLLM pruning pipeline...
+[🎯] Using MACs-first approach, target ratio will be derived
+[📏] Using round-to value: None
+[🔧] Using conservative default cifar10 isomorphic ratios: {'qkv_multiplier': 0.25, 'mlp_multiplier': 0.5, 'proj_multiplier': 0.0, 'head_multiplier': 0.0}
+[🎯] Direct N:M patterns from agent: attn={'N': 3, 'M': 5}, mlp={'N': 2, 'M': 5}
+[💻] Using device: cuda
+[💾] Creating deep copy of unpruned original model before pruning...
+[✅] Original unpruned model stored in state for later reattachment.
+
+[Phase 1] SparseGPT Initialization...
+[📊] Base model: 5,528,660 params, 1.266G MACs
+[🔄] Calculated target ratio from MACs: 0.5103
+[⚠️] Ratio 0.5103 was previously attempted, but Analysis Agent suggested it again.
+[🔍] Found 12 transformer blocks
+[📊] Total model MACs: 1.266G
+[📊] Target MACs: 0.620G
+[📊] Target ratio: 0.510
+[🔍] Found 24 MLP layers (3,538,944 total params)
+[📊] MLP MAC fraction estimated: 0.666 (3,538,944/5,312,256 params)
+[🔍] Found 24 attention layers (1,769,472 total params)
+[📊] Attention MAC fraction estimated: 0.333 (1,769,472/5,312,256 params)
+[🪫] Max feasible reduction under caps: 0.990 → best achievable ≈ 0.013G
+[🎯] LLM suggests: mlp_pruning=0.500, attn_pruning=0.250
+[🎯] Using as pruning ratios: r_mlp=0.500, r_attn=0.250
+[🎯] Predicted achievement: 0.417 (target: 0.510)
+[⚖️] Post-alloc solve -> r_mlp=0.500, r_attn=0.250 (mlp_frac=0.667, attn_frac=0.333, caps: 0.99/0.99)
+[📊] MLP: 0.844G → 0.422G (ratio: 0.500)
+[📊] Attention: 0.422G → 0.316G (ratio: 0.250)
+[📊] Final group summary:
+  - MLP blocks: 12 couples
+  - Attention blocks: 12 couples
+  - Output projections: 0 layers
+Replaced blocks.0.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.0.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.0.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.0.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.1.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.1.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.1.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.1.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.2.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.2.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.2.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.2.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.3.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.3.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.3.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.3.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.4.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.4.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.4.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.4.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.5.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.5.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.5.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.5.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.6.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.6.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.6.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.6.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.7.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.7.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.7.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.7.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.8.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.8.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.8.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.8.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.9.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.9.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.9.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.9.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.10.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.10.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.10.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.10.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.11.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.11.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.11.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.11.mlp.fc2: {'N': 2, 'M': 5}
+Replaced head_dist: {'N': 8, 'M': 9}
+Ready.
+0 attn.qkv
+Pruning ...
+time 6.17
+error 53.5465087890625
+0 attn.proj
+Pruning ...
+time 0.08
+error 0.14038987457752228
+0 mlp.fc1
+Pruning ...
+time 0.08
+error 22.611915588378906
+0 mlp.fc2
+Pruning ...
+time 0.34
+error 0.41044414043426514
+1 attn.qkv
+Pruning ...
+time 0.08
+error 67.94087219238281
+1 attn.proj
+Pruning ...
+time 0.08
+error 0.17390325665473938
+1 mlp.fc1
+Pruning ...
+time 0.08
+error 28.7418212890625
+1 mlp.fc2
+Pruning ...
+time 0.33
+error 0.4587101340293884
+2 attn.qkv
+Pruning ...
+time 0.08
+error 74.2585220336914
+2 attn.proj
+Pruning ...
+time 0.08
+error 0.20167452096939087
+2 mlp.fc1
+Pruning ...
+time 0.08
+error 31.11797523498535
+2 mlp.fc2
+Pruning ...
+time 0.33
+error 0.4673539996147156
+3 attn.qkv
+Pruning ...
+time 0.08
+error 81.64591979980469
+3 attn.proj
+Pruning ...
+time 0.08
+error 0.20466384291648865
+3 mlp.fc1
+Pruning ...
+time 0.08
+error 32.92094421386719
+3 mlp.fc2
+Pruning ...
+time 0.33
+error 0.49824514985084534
+4 attn.qkv
+Pruning ...
+time 0.08
+error 82.22036743164062
+4 attn.proj
+Pruning ...
+time 0.08
+error 0.2083684653043747
+4 mlp.fc1
+Pruning ...
+time 0.08
+error 33.68086242675781
+4 mlp.fc2
+Pruning ...
+time 0.33
+error 0.4958959221839905
+5 attn.qkv
+Pruning ...
+time 0.08
+error 83.21693420410156
+5 attn.proj
+Pruning ...
+time 0.08
+error 0.20584382116794586
+5 mlp.fc1
+Pruning ...
+time 0.08
+error 35.232513427734375
+5 mlp.fc2
+Pruning ...
+time 0.33
+error 0.49655580520629883
+6 attn.qkv
+Pruning ...
+time 0.08
+error 88.85502624511719
+6 attn.proj
+Pruning ...
+time 0.08
+error 0.23337741196155548
+6 mlp.fc1
+Pruning ...
+time 0.08
+error 36.127540588378906
+6 mlp.fc2
+Pruning ...
+time 0.33
+error 0.5209507942199707
+7 attn.qkv
+Pruning ...
+time 0.08
+error 93.31849670410156
+7 attn.proj
+Pruning ...
+time 0.08
+error 0.24103283882141113
+7 mlp.fc1
+Pruning ...
+time 0.08
+error 37.283042907714844
+7 mlp.fc2
+Pruning ...
+time 0.33
+error 0.5010908246040344
+8 attn.qkv
+Pruning ...
+time 0.08
+error 94.87136840820312
+8 attn.proj
+Pruning ...
+time 0.08
+error 0.27105239033699036
+8 mlp.fc1
+Pruning ...
+time 0.08
+error 38.72648620605469
+8 mlp.fc2
+Pruning ...
+time 0.33
+error 0.5042287111282349
+9 attn.qkv
+Pruning ...
+time 0.08
+error 94.13517761230469
+9 attn.proj
+Pruning ...
+time 0.08
+error 0.28770187497138977
+9 mlp.fc1
+Pruning ...
+time 0.08
+error 39.43806457519531
+9 mlp.fc2
+Pruning ...
+time 0.32
+error 0.5406653881072998
+10 attn.qkv
+Pruning ...
+time 0.08
+error 96.22846984863281
+10 attn.proj
+Pruning ...
+time 0.08
+error 0.24248497188091278
+10 mlp.fc1
+Pruning ...
+time 0.08
+error 39.438255310058594
+10 mlp.fc2
+Pruning ...
+time 0.32
+error 0.5521293878555298
+11 attn.qkv
+Pruning ...
+time 0.08
+error 94.52693939208984
+11 attn.proj
+Pruning ...
+time 0.08
+error 0.25213417410850525
+11 mlp.fc1
+Pruning ...
+time 0.08
+error 39.0760383605957
+11 mlp.fc2
+Pruning ...
+time 0.33
+error 0.5559407472610474
+[✅] SparseGPT initialization complete
+  Layer blocks.0.attn.qkv sparsity: 0.578
+  Layer blocks.0.attn.proj sparsity: 0.578
+  Layer blocks.0.mlp.fc1 sparsity: 0.385
+  Layer blocks.0.mlp.fc2 sparsity: 0.391
+  Layer blocks.1.attn.qkv sparsity: 0.578
+  Layer blocks.1.attn.proj sparsity: 0.578
+  Layer blocks.1.mlp.fc1 sparsity: 0.385
+  Layer blocks.1.mlp.fc2 sparsity: 0.391
+  Layer blocks.2.attn.qkv sparsity: 0.578
+  Layer blocks.2.attn.proj sparsity: 0.578
+  Layer blocks.2.mlp.fc1 sparsity: 0.385
+  Layer blocks.2.mlp.fc2 sparsity: 0.391
+  Layer blocks.3.attn.qkv sparsity: 0.578
+  Layer blocks.3.attn.proj sparsity: 0.578
+  Layer blocks.3.mlp.fc1 sparsity: 0.385
+  Layer blocks.3.mlp.fc2 sparsity: 0.391
+  Layer blocks.4.attn.qkv sparsity: 0.578
+  Layer blocks.4.attn.proj sparsity: 0.578
+  Layer blocks.4.mlp.fc1 sparsity: 0.385
+  Layer blocks.4.mlp.fc2 sparsity: 0.391
+  Layer blocks.5.attn.qkv sparsity: 0.578
+  Layer blocks.5.attn.proj sparsity: 0.578
+  Layer blocks.5.mlp.fc1 sparsity: 0.385
+  Layer blocks.5.mlp.fc2 sparsity: 0.391
+  Layer blocks.6.attn.qkv sparsity: 0.578
+  Layer blocks.6.attn.proj sparsity: 0.578
+  Layer blocks.6.mlp.fc1 sparsity: 0.385
+  Layer blocks.6.mlp.fc2 sparsity: 0.391
+  Layer blocks.7.attn.qkv sparsity: 0.578
+  Layer blocks.7.attn.proj sparsity: 0.578
+  Layer blocks.7.mlp.fc1 sparsity: 0.385
+  Layer blocks.7.mlp.fc2 sparsity: 0.391
+  Layer blocks.8.attn.qkv sparsity: 0.578
+  Layer blocks.8.attn.proj sparsity: 0.578
+  Layer blocks.8.mlp.fc1 sparsity: 0.385
+  Layer blocks.8.mlp.fc2 sparsity: 0.391
+  Layer blocks.9.attn.qkv sparsity: 0.578
+  Layer blocks.9.attn.proj sparsity: 0.578
+  Layer blocks.9.mlp.fc1 sparsity: 0.385
+  Layer blocks.9.mlp.fc2 sparsity: 0.391
+  Layer blocks.10.attn.qkv sparsity: 0.578
+  Layer blocks.10.attn.proj sparsity: 0.578
+  Layer blocks.10.mlp.fc1 sparsity: 0.385
+  Layer blocks.10.mlp.fc2 sparsity: 0.391
+  Layer blocks.11.attn.qkv sparsity: 0.578
+  Layer blocks.11.attn.proj sparsity: 0.578
+  Layer blocks.11.mlp.fc1 sparsity: 0.385
+  Layer blocks.11.mlp.fc2 sparsity: 0.391
+  Layer head_dist sparsity: 0.000
+
+[Phase 2] MaskLLM Mask Learning...
+Replaced blocks.0.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.0.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.0.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.0.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.1.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.1.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.1.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.1.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.2.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.2.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.2.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.2.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.3.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.3.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.3.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.3.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.4.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.4.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.4.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.4.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.5.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.5.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.5.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.5.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.6.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.6.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.6.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.6.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.7.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.7.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.7.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.7.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.8.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.8.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.8.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.8.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.9.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.9.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.9.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.9.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.10.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.10.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.10.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.10.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.11.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.11.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.11.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.11.mlp.fc2: {'N': 2, 'M': 5}
+Replaced head: {'N': 8, 'M': 9}
+Replaced head_dist: {'N': 8, 'M': 9}
+[📊] MaskLLM model (before training):
+  Total params:  16,149,134
+  Weight params: 5,528,660
+  Gate params:   10,620,474 (65.76%)
+  blocks.0.attn.qkv: N=3, M=5, C(M,N)=10, blocks=22,118, gate_params=221,180
+  blocks.0.attn.proj: N=3, M=5, C(M,N)=10, blocks=7,372, gate_params=73,720
+  blocks.0.mlp.fc1: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.0.mlp.fc2: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.1.attn.qkv: N=3, M=5, C(M,N)=10, blocks=22,118, gate_params=221,180
+  blocks.1.attn.proj: N=3, M=5, C(M,N)=10, blocks=7,372, gate_params=73,720
+  blocks.1.mlp.fc1: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.1.mlp.fc2: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.2.attn.qkv: N=3, M=5, C(M,N)=10, blocks=22,118, gate_params=221,180
+  blocks.2.attn.proj: N=3, M=5, C(M,N)=10, blocks=7,372, gate_params=73,720
+  blocks.2.mlp.fc1: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.2.mlp.fc2: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.3.attn.qkv: N=3, M=5, C(M,N)=10, blocks=22,118, gate_params=221,180
+  blocks.3.attn.proj: N=3, M=5, C(M,N)=10, blocks=7,372, gate_params=73,720
+  blocks.3.mlp.fc1: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.3.mlp.fc2: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.4.attn.qkv: N=3, M=5, C(M,N)=10, blocks=22,118, gate_params=221,180
+  blocks.4.attn.proj: N=3, M=5, C(M,N)=10, blocks=7,372, gate_params=73,720
+  blocks.4.mlp.fc1: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.4.mlp.fc2: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.5.attn.qkv: N=3, M=5, C(M,N)=10, blocks=22,118, gate_params=221,180
+  blocks.5.attn.proj: N=3, M=5, C(M,N)=10, blocks=7,372, gate_params=73,720
+  blocks.5.mlp.fc1: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.5.mlp.fc2: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.6.attn.qkv: N=3, M=5, C(M,N)=10, blocks=22,118, gate_params=221,180
+  blocks.6.attn.proj: N=3, M=5, C(M,N)=10, blocks=7,372, gate_params=73,720
+  blocks.6.mlp.fc1: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.6.mlp.fc2: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.7.attn.qkv: N=3, M=5, C(M,N)=10, blocks=22,118, gate_params=221,180
+  blocks.7.attn.proj: N=3, M=5, C(M,N)=10, blocks=7,372, gate_params=73,720
+  blocks.7.mlp.fc1: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.7.mlp.fc2: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.8.attn.qkv: N=3, M=5, C(M,N)=10, blocks=22,118, gate_params=221,180
+  blocks.8.attn.proj: N=3, M=5, C(M,N)=10, blocks=7,372, gate_params=73,720
+  blocks.8.mlp.fc1: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.8.mlp.fc2: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.9.attn.qkv: N=3, M=5, C(M,N)=10, blocks=22,118, gate_params=221,180
+  blocks.9.attn.proj: N=3, M=5, C(M,N)=10, blocks=7,372, gate_params=73,720
+  blocks.9.mlp.fc1: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.9.mlp.fc2: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.10.attn.qkv: N=3, M=5, C(M,N)=10, blocks=22,118, gate_params=221,180
+  blocks.10.attn.proj: N=3, M=5, C(M,N)=10, blocks=7,372, gate_params=73,720
+  blocks.10.mlp.fc1: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.10.mlp.fc2: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.11.attn.qkv: N=3, M=5, C(M,N)=10, blocks=22,118, gate_params=221,180
+  blocks.11.attn.proj: N=3, M=5, C(M,N)=10, blocks=7,372, gate_params=73,720
+  blocks.11.mlp.fc1: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  blocks.11.mlp.fc2: N=2, M=5, C(M,N)=10, blocks=29,491, gate_params=294,910
+  head: N=8, M=9, C(M,N)=9, blocks=213, gate_params=1,917
+  head_dist: N=8, M=9, C(M,N)=9, blocks=213, gate_params=1,917
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([22118, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([7372, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3854
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3906
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([22118, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([7372, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3854
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3906
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([22118, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([7372, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3854
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3906
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([22118, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([7372, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3854
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3906
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([22118, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([7372, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3854
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3906
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([22118, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([7372, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3854
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3906
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([22118, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([7372, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3854
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3906
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([22118, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([7372, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3854
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3906
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([22118, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([7372, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3854
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3906
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([22118, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([7372, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3854
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3906
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([22118, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([7372, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3854
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3906
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([22118, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.5781
+Block shape: torch.Size([7372, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3854
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.3906
+Block shape: torch.Size([29491, 10])
+initializing with prior (strength=3), Prior Sparsity: 0.0000
+Block shape: torch.Size([213, 9])
+initializing with prior (strength=3), Prior Sparsity: 0.0000
+Block shape: torch.Size([213, 9])
+[🔒] Freezing all parameters except .gate...
+[🎯] MaskLLM training: 10 epochs, lr=0.001
+[Epoch 0/10] tau=4.000, scaling=10.0
+[Epoch 0] Loss: 2.0244, Top-1: 25.97%, Top-5: 76.37%
+[Epoch 1/10] tau=3.561, scaling=20.0
+[Epoch 1] Loss: 1.8993, Top-1: 30.77%, Top-5: 82.70%
+[Epoch 2/10] tau=3.122, scaling=30.0
+[Epoch 2] Loss: 1.8342, Top-1: 33.98%, Top-5: 84.14%
+[Epoch 3/10] tau=2.683, scaling=40.0
+[Epoch 3] Loss: 1.7841, Top-1: 35.28%, Top-5: 85.81%
+[Epoch 4/10] tau=2.244, scaling=50.0
+[Epoch 4] Loss: 1.6932, Top-1: 38.71%, Top-5: 88.32%
+[Epoch 5/10] tau=1.806, scaling=60.0
+[Epoch 5] Loss: 1.6772, Top-1: 39.81%, Top-5: 88.66%
+[Epoch 6/10] tau=1.367, scaling=70.0
+[Epoch 6] Loss: 1.6682, Top-1: 40.24%, Top-5: 88.37%
+[Epoch 7/10] tau=0.928, scaling=80.0
+[Epoch 7] Loss: 1.6264, Top-1: 41.88%, Top-5: 89.65%
+[Epoch 8/10] tau=0.489, scaling=90.0
+[Epoch 8] Loss: 1.6137, Top-1: 42.37%, Top-5: 89.71%
+[Epoch 9/10] tau=0.050, scaling=100.0
+[Epoch 9] Loss: 1.5928, Top-1: 43.25%, Top-5: 90.32%
+[✅] MaskLLM training complete
+
+[Phase 3] Extracting learned masks...
+Replaced blocks.0.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.0.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.0.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.0.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.1.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.1.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.1.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.1.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.2.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.2.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.2.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.2.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.3.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.3.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.3.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.3.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.4.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.4.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.4.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.4.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.5.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.5.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.5.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.5.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.6.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.6.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.6.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.6.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.7.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.7.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.7.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.7.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.8.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.8.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.8.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.8.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.9.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.9.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.9.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.9.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.10.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.10.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.10.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.10.mlp.fc2: {'N': 2, 'M': 5}
+Replaced blocks.11.attn.qkv: {'N': 3, 'M': 5}
+Replaced blocks.11.attn.proj: {'N': 3, 'M': 5}
+Replaced blocks.11.mlp.fc1: {'N': 2, 'M': 5}
+Replaced blocks.11.mlp.fc2: {'N': 2, 'M': 5}
+Replaced head: {'N': 8, 'M': 9}
+Replaced head_dist: {'N': 8, 'M': 9}
+[📊] Frozen model (after training):
+  Total params:  5,528,660
+  Gate params removed: 10,620,474
+  Param reduction: 65.76% fewer than MaskLLM model
+[✅] Final model created with learned frozen masks
+  Final blocks.0.attn.qkv sparsity: 0.400
+  Final blocks.0.attn.proj sparsity: 0.400
+  Final blocks.0.mlp.fc1 sparsity: 0.600
+  Final blocks.0.mlp.fc2 sparsity: 0.600
+  Final blocks.1.attn.qkv sparsity: 0.400
+  Final blocks.1.attn.proj sparsity: 0.400
+  Final blocks.1.mlp.fc1 sparsity: 0.600
+  Final blocks.1.mlp.fc2 sparsity: 0.600
+  Final blocks.2.attn.qkv sparsity: 0.400
+  Final blocks.2.attn.proj sparsity: 0.400
+  Final blocks.2.mlp.fc1 sparsity: 0.600
+  Final blocks.2.mlp.fc2 sparsity: 0.600
+  Final blocks.3.attn.qkv sparsity: 0.400
+  Final blocks.3.attn.proj sparsity: 0.400
+  Final blocks.3.mlp.fc1 sparsity: 0.600
+  Final blocks.3.mlp.fc2 sparsity: 0.600
+  Final blocks.4.attn.qkv sparsity: 0.400
+  Final blocks.4.attn.proj sparsity: 0.400
+  Final blocks.4.mlp.fc1 sparsity: 0.600
+  Final blocks.4.mlp.fc2 sparsity: 0.600
+  Final blocks.5.attn.qkv sparsity: 0.400
+  Final blocks.5.attn.proj sparsity: 0.400
+  Final blocks.5.mlp.fc1 sparsity: 0.600
+  Final blocks.5.mlp.fc2 sparsity: 0.600
+  Final blocks.6.attn.qkv sparsity: 0.400
+  Final blocks.6.attn.proj sparsity: 0.400
+  Final blocks.6.mlp.fc1 sparsity: 0.600
+  Final blocks.6.mlp.fc2 sparsity: 0.600
+  Final blocks.7.attn.qkv sparsity: 0.400
+  Final blocks.7.attn.proj sparsity: 0.400
+  Final blocks.7.mlp.fc1 sparsity: 0.600
+  Final blocks.7.mlp.fc2 sparsity: 0.600
+  Final blocks.8.attn.qkv sparsity: 0.400
+  Final blocks.8.attn.proj sparsity: 0.400
+  Final blocks.8.mlp.fc1 sparsity: 0.600
+  Final blocks.8.mlp.fc2 sparsity: 0.600
+  Final blocks.9.attn.qkv sparsity: 0.400
+  Final blocks.9.attn.proj sparsity: 0.400
+  Final blocks.9.mlp.fc1 sparsity: 0.600
+  Final blocks.9.mlp.fc2 sparsity: 0.600
+  Final blocks.10.attn.qkv sparsity: 0.400
+  Final blocks.10.attn.proj sparsity: 0.400
+  Final blocks.10.mlp.fc1 sparsity: 0.600
+  Final blocks.10.mlp.fc2 sparsity: 0.600
+  Final blocks.11.attn.qkv sparsity: 0.400
+  Final blocks.11.attn.proj sparsity: 0.400
+  Final blocks.11.mlp.fc1 sparsity: 0.600
+  Final blocks.11.mlp.fc2 sparsity: 0.600
+  Final head sparsity: 0.111
+  Final head_dist sparsity: 0.111
+
+[Phase 4] Evaluating final MaskLLM model...
+[🎯] Zero-shot accuracy: 43.24%
+[📊] MaskLLM model accuracy: 43.24%
+[📊] MACs: 1.266G -> 0.565G (reduction: 55.3%)
+[💾] Saved MaskLLM checkpoint: /work/hdd/bfxa/dshah13/expf_cl/deit_tiny_distilled_patch16_224.fb_in1k_cifar10_macs0p62g/job_16217111/checkpoints/maskllm_deit_tiny_distilled_patch16_224.fb_in1k_cifar10_rev3.pth
+
+[📊] MaskLLM Pruning Results Summary:
+  MACs reduction: 55.34%
+  MaskLLM accuracy: 43.24%
+[⏱️] Completed: 4. Pruning Agent in 852.10s
+[✅] Achieved 0.565G MACs, meets target 620000000.000G (error: -8.8%)
+[🔧] Patched attention forward for blocks.0.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.1.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.2.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.3.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.4.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.5.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.6.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.7.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.8.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.9.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.10.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.11.attn (head_dim: 64)
+[💾] Stored pruned model in MODEL_STORE
+[✅] MACs WITHIN TOLERANCE:
+   Achieved: 0.565G vs Target: 0.620G
+   Error: -8.80% (tolerance: +1.0%/-20.0%)
+   Zero-shot accuracy: 43.24% - proceeding to fine-tune
+
+[🔄] cifar10 step received: dict_keys(['prune'])
+[🔄] Fine-tuning cifar10 model
+[⏱️] Starting: 5. Fine-tuning Agent
+
+[🔄] Starting REVISED CIFAR10 fine-tuning process...
+[💻] Fine-tuning on device: cuda
+[🔍] Model type: ViT
+[🔧] Using LR 0.0005 for 55.3% pruned model
+[🧮] Using AdamW optimizer for ViT
+[🎯] Simple fine-tuning: 30 epochs, LR 0.0005
+
+[📊] Epoch 1/30
+[🔄] Batch 0: Loss 1.566, Acc 48.44%
+[🔄] Batch 100: Loss 1.673, Acc 39.02%
+[🔄] Batch 200: Loss 1.794, Acc 39.91%
+[🔄] Batch 300: Loss 1.690, Acc 40.70%
+[📊] Validation: Accuracy 42.12%
+[✅] New best: 42.12%
+
+[📊] Epoch 2/30
+[🔄] Batch 0: Loss 1.665, Acc 44.53%
+[🔄] Batch 100: Loss 1.842, Acc 34.89%
+[🔄] Batch 200: Loss 1.706, Acc 35.96%
+[🔄] Batch 300: Loss 1.656, Acc 37.39%
+[📊] Validation: Accuracy 44.88%
+[✅] New best: 44.88%
+
+[📊] Epoch 3/30
+[🔄] Batch 0: Loss 1.599, Acc 38.28%
+[🔄] Batch 100: Loss 1.665, Acc 42.44%
+[🔄] Batch 200: Loss 1.770, Acc 43.17%
+[🔄] Batch 300: Loss 1.482, Acc 44.28%
+[📊] Validation: Accuracy 48.35%
+[✅] New best: 48.35%
+
+[📊] Epoch 4/30
+[🔄] Batch 0: Loss 1.425, Acc 54.69%
+[🔄] Batch 100: Loss 1.392, Acc 50.32%
+[🔄] Batch 200: Loss 1.565, Acc 50.73%
+[🔄] Batch 300: Loss 1.351, Acc 51.14%
+[📊] Validation: Accuracy 54.34%
+[✅] New best: 54.34%
+
+[📊] Epoch 5/30
+[🔄] Batch 0: Loss 1.312, Acc 57.81%
+[🔄] Batch 100: Loss 1.465, Acc 55.15%
+[🔄] Batch 200: Loss 1.318, Acc 56.30%
+[🔄] Batch 300: Loss 1.213, Acc 56.80%
+[📊] Validation: Accuracy 56.25%
+[✅] New best: 56.25%
+
+[📊] Epoch 6/30
+[🔄] Batch 0: Loss 1.302, Acc 59.38%
+[🔄] Batch 100: Loss 1.326, Acc 58.45%
+[🔄] Batch 200: Loss 1.349, Acc 59.15%
+[🔄] Batch 300: Loss 1.273, Acc 59.61%
+[📊] Validation: Accuracy 61.10%
+[✅] New best: 61.10%
+
+[📊] Epoch 7/30
+[🔄] Batch 0: Loss 1.167, Acc 62.50%
+[🔄] Batch 100: Loss 1.213, Acc 61.06%
+[🔄] Batch 200: Loss 1.056, Acc 61.65%
+[🔄] Batch 300: Loss 1.211, Acc 61.86%
+[📊] Validation: Accuracy 62.95%
+[✅] New best: 62.95%
+
+[📊] Epoch 8/30
+[🔄] Batch 0: Loss 1.045, Acc 70.31%
+[🔄] Batch 100: Loss 1.261, Acc 63.06%
+[🔄] Batch 200: Loss 1.097, Acc 63.56%
+[🔄] Batch 300: Loss 1.291, Acc 63.85%
+[📊] Validation: Accuracy 65.26%
+[✅] New best: 65.26%
+
+[📊] Epoch 9/30
+[🔄] Batch 0: Loss 1.132, Acc 60.16%
+[🔄] Batch 100: Loss 1.109, Acc 65.26%
+[🔄] Batch 200: Loss 1.039, Acc 65.09%
+[🔄] Batch 300: Loss 1.175, Acc 65.53%
+[📊] Validation: Accuracy 65.96%
+[✅] New best: 65.96%
+
+[📊] Epoch 10/30
+[🔄] Batch 0: Loss 1.105, Acc 70.31%
+[🔄] Batch 100: Loss 1.086, Acc 67.64%
+[🔄] Batch 200: Loss 1.091, Acc 67.68%
+[🔄] Batch 300: Loss 1.135, Acc 67.70%
+[📊] Validation: Accuracy 67.77%
+[✅] New best: 67.77%
+
+[📊] Epoch 11/30
+[🔄] Batch 0: Loss 1.003, Acc 67.97%
+[🔄] Batch 100: Loss 1.052, Acc 69.58%
+[🔄] Batch 200: Loss 1.137, Acc 69.38%
+[🔄] Batch 300: Loss 0.984, Acc 69.15%
+[📊] Validation: Accuracy 67.54%
+[📉] No improvement for 1/5 epochs (best: 67.77%)
+
+[📊] Epoch 12/30
+[🔄] Batch 0: Loss 1.005, Acc 67.97%
+[🔄] Batch 100: Loss 0.953, Acc 70.15%
+[🔄] Batch 200: Loss 0.949, Acc 70.62%
+[🔄] Batch 300: Loss 1.011, Acc 70.46%
+[📊] Validation: Accuracy 68.13%
+[✅] New best: 68.13%
+
+[📊] Epoch 13/30
+[🔄] Batch 0: Loss 0.957, Acc 69.53%
+[🔄] Batch 100: Loss 0.949, Acc 71.80%
+[🔄] Batch 200: Loss 1.049, Acc 71.70%
+[🔄] Batch 300: Loss 0.976, Acc 71.59%
+[📊] Validation: Accuracy 69.09%
+[✅] New best: 69.09%
+
+[📊] Epoch 14/30
+[🔄] Batch 0: Loss 1.022, Acc 68.75%
+[🔄] Batch 100: Loss 1.006, Acc 72.52%
+[🔄] Batch 200: Loss 0.792, Acc 73.00%
+[🔄] Batch 300: Loss 0.989, Acc 73.06%
+[📊] Validation: Accuracy 71.05%
+[✅] New best: 71.05%
+
+[📊] Epoch 15/30
+[🔄] Batch 0: Loss 0.984, Acc 71.88%
+[🔄] Batch 100: Loss 0.861, Acc 73.46%
+[🔄] Batch 200: Loss 0.843, Acc 73.63%
+[🔄] Batch 300: Loss 1.052, Acc 74.02%
+[📊] Validation: Accuracy 71.58%
+[✅] New best: 71.58%
+
+[📊] Epoch 16/30
+[🔄] Batch 0: Loss 0.856, Acc 75.78%
+[🔄] Batch 100: Loss 0.813, Acc 75.53%
+[🔄] Batch 200: Loss 0.859, Acc 75.47%
+[🔄] Batch 300: Loss 0.845, Acc 75.22%
+[📊] Validation: Accuracy 72.74%
+[✅] New best: 72.74%
+
+[📊] Epoch 17/30
+[🔄] Batch 0: Loss 0.925, Acc 75.78%
+[🔄] Batch 100: Loss 0.847, Acc 76.93%
+[🔄] Batch 200: Loss 0.949, Acc 76.76%
+[🔄] Batch 300: Loss 0.914, Acc 76.42%
+[📊] Validation: Accuracy 73.96%
+[✅] New best: 73.96%
+
+[📊] Epoch 18/30
+[🔄] Batch 0: Loss 0.906, Acc 73.44%
+[🔄] Batch 100: Loss 0.795, Acc 78.12%
+[🔄] Batch 200: Loss 0.857, Acc 77.59%
+[🔄] Batch 300: Loss 0.787, Acc 77.67%
+[📊] Validation: Accuracy 74.10%
+[✅] New best: 74.10%
+
+[📊] Epoch 19/30
+[🔄] Batch 0: Loss 0.772, Acc 76.56%
+[🔄] Batch 100: Loss 0.892, Acc 78.65%
+[🔄] Batch 200: Loss 0.964, Acc 78.53%
+[🔄] Batch 300: Loss 0.766, Acc 78.54%
+[📊] Validation: Accuracy 75.18%
+[✅] New best: 75.18%
+
+[📊] Epoch 20/30
+[🔄] Batch 0: Loss 0.779, Acc 80.47%
+[🔄] Batch 100: Loss 0.660, Acc 79.90%
+[🔄] Batch 200: Loss 0.778, Acc 79.94%
+[🔄] Batch 300: Loss 0.734, Acc 79.71%
+[📊] Validation: Accuracy 75.20%
+[✅] New best: 75.20%
+
+[📊] Epoch 21/30
+[🔄] Batch 0: Loss 0.688, Acc 81.25%
+[🔄] Batch 100: Loss 0.801, Acc 79.91%
+[🔄] Batch 200: Loss 0.766, Acc 80.28%
+[🔄] Batch 300: Loss 0.743, Acc 80.41%
+[📊] Validation: Accuracy 76.04%
+[✅] New best: 76.04%
+
+[📊] Epoch 22/30
+[🔄] Batch 0: Loss 0.765, Acc 82.81%
+[🔄] Batch 100: Loss 0.785, Acc 81.95%
+[🔄] Batch 200: Loss 0.726, Acc 81.77%
+[🔄] Batch 300: Loss 0.636, Acc 81.59%
+[📊] Validation: Accuracy 76.63%
+[✅] New best: 76.63%
+
+[📊] Epoch 23/30
+[🔄] Batch 0: Loss 0.791, Acc 79.69%
+[🔄] Batch 100: Loss 0.636, Acc 82.36%
+[🔄] Batch 200: Loss 0.705, Acc 82.45%
+[🔄] Batch 300: Loss 0.817, Acc 82.13%
+[📊] Validation: Accuracy 76.84%
+[✅] New best: 76.84%
+
+[📊] Epoch 24/30
+[🔄] Batch 0: Loss 0.753, Acc 78.91%
+[🔄] Batch 100: Loss 0.634, Acc 83.24%
+[🔄] Batch 200: Loss 0.773, Acc 83.28%
+[🔄] Batch 300: Loss 0.608, Acc 83.15%
+[📊] Validation: Accuracy 78.15%
+[✅] New best: 78.15%
+
+[📊] Epoch 25/30
+[🔄] Batch 0: Loss 0.671, Acc 87.50%
+[🔄] Batch 100: Loss 0.585, Acc 84.29%
+[🔄] Batch 200: Loss 0.712, Acc 84.29%
+[🔄] Batch 300: Loss 0.678, Acc 84.08%
+[📊] Validation: Accuracy 77.41%
+[📉] No improvement for 1/5 epochs (best: 78.15%)
+
+[📊] Epoch 26/30
+[🔄] Batch 0: Loss 0.731, Acc 83.59%
+[🔄] Batch 100: Loss 0.661, Acc 84.97%
+[🔄] Batch 200: Loss 0.750, Acc 84.61%
+[🔄] Batch 300: Loss 0.712, Acc 84.50%
+[📊] Validation: Accuracy 77.69%
+[📉] No improvement for 2/5 epochs (best: 78.15%)
+
+[📊] Epoch 27/30
+[🔄] Batch 0: Loss 0.607, Acc 88.28%
+[🔄] Batch 100: Loss 0.697, Acc 85.08%
+[🔄] Batch 200: Loss 0.618, Acc 85.18%
+[🔄] Batch 300: Loss 0.625, Acc 85.40%
+[📊] Validation: Accuracy 78.05%
+[📉] No improvement for 3/5 epochs (best: 78.15%)
+
+[📊] Epoch 28/30
+[🔄] Batch 0: Loss 0.624, Acc 88.28%
+[🔄] Batch 100: Loss 0.636, Acc 86.06%
+[🔄] Batch 200: Loss 0.591, Acc 85.84%
+[🔄] Batch 300: Loss 0.642, Acc 85.73%
+[📊] Validation: Accuracy 78.31%
+[✅] New best: 78.31%
+
+[📊] Epoch 29/30
+[🔄] Batch 0: Loss 0.569, Acc 85.94%
+[🔄] Batch 100: Loss 0.608, Acc 85.92%
+[🔄] Batch 200: Loss 0.575, Acc 86.11%
+[🔄] Batch 300: Loss 0.544, Acc 86.05%
+[📊] Validation: Accuracy 78.49%
+[✅] New best: 78.49%
+
+[📊] Epoch 30/30
+[🔄] Batch 0: Loss 0.709, Acc 82.81%
+[🔄] Batch 100: Loss 0.640, Acc 85.66%
+[🔄] Batch 200: Loss 0.538, Acc 85.70%
+[🔄] Batch 300: Loss 0.659, Acc 86.07%
+[📊] Validation: Accuracy 78.47%
+[📉] No improvement for 1/5 epochs (best: 78.49%)
+[🏆] Using best model with 78.49% accuracy
+
+[📈] Fine-tuning Results:
+  - Zero-shot: 43.24%
+  - Fine-tuned: 78.49%
+  - Improvement: 35.25%
+  - Status: ✅ SUCCESS
+[⏱️] Completed: 5. Fine-tuning Agent in 1787.43s
+
+[🔄] cifar10 step received: dict_keys(['fine_tune'])
+[🔄] Evaluating cifar10 model
+[⏱️] Starting: 6. Evaluation Agent
+
+[📊] Starting comprehensive CIFAR10 evaluation...
+[📊] Stored Zero-shot accuracy: 43.24%
+
+[🧪] Evaluating fine-tuned model on cifar10...
+[📋] Dimensions match - safe to reattach components
+[✅] Reattached head (dim: 192, strict=False)
+[✅] Reattached head_dist (dim: 192, strict=False)
+[✅] Reattached cls_token (shape: torch.Size([1, 1, 192]))
+[✅] Reattached dist_token (shape: torch.Size([1, 1, 192]))
+[✅] Reattached pos_embed (shape: torch.Size([1, 198, 192]))
+[📊] Fine-tuned model accuracy: 66.98%
+[📈] CORRECT Accuracy improvement: 23.74% (54.9% relative)
+
+[✅] CIFAR10 Evaluation Complete:
+  - Success: True
+  - MAC Achievement: 0.565G (target: 0.620G)
+  - MAC Efficiency: 44.7% of baseline (1.266G)
+  - MAC Error: -8.8% (allowed: -20.0%…+1.0%)
+  - Final Accuracy: 66.98% (threshold: 1.0%)
+  - Accuracy Improvement: 23.74%
+  - Overshoot tolerance: +6200000.000G (+1.0%)
+  - Undershoot tolerance: -124000000.000G (-20.0%)
+[⏱️] Completed: 6. Evaluation Agent in 9.56s
+
+[🔄] cifar10 step received: dict_keys(['evaluate'])
+[🔄] Profiling cifar10 model
+[🔄] Profiling after evaluation, revision 4 for cifar10
+[⏱️] Starting: 1. MAC-aware Profiling Agent
+[🔍] MAC Context: 1.266G → 0.620G (+1.0%/-20.0%)
+[✅] torch_pruning measured: 1.266 GMACs
+
+OpenRouter Response Status: 200
+[✅] MAC Target: 0.620G (49.0% efficiency)
+[⏱️] Completed: 1. MAC-aware Profiling Agent in 20.67s
+
+[🔄] cifar10 step received: dict_keys(['profile'])
+[🔄] Master Agent analyzing cifar10 strategy
+[🔍] Two-Phase MAC Search Status:
+   Current revision: 4
+   Candidate models found: 8
+   First success at revision: 0
+[🔍] Phase 2: Extended MAC search continuing... 17 trials remaining after this
+[📊] Candidates so far: 8
+[🔧] Decremented extended_search_remaining: 18 → 17
+✅ Initialized OpenRouter with model: meta-llama/llama-3.2-3b-instruct
+[🧠] MAC context: 1.266G → 0.620G (+1.0%/-20.0%)
+
+[🔄] cifar10 step received: dict_keys(['master'])
+[📋] Received general strategic guidance from Master Agent:
+   1. EXCELLENT MAC STRATEGY FOUND: 43.2% accuracy achieved
+   2. Strategy achieved 0.565G vs target 0.620G MAC
+[⏱️] Starting: 3. Enhanced Analysis Agent
+[🔧] Calculated target ratio from MACs: 0.510 (51.0%)
+[🔧] Calculated target ratio from MACs: 0.510 (51.0%)
+[🧠] ViT Analysis with Historical Learning (MACs-first):
+   Target ratio: 0.510 (user-specified)
+   Target MACs:  0.620G (baseline 1.266G, tolerance +1.0%/-20.0%)
+   Model: deit_tiny_distilled_patch16_224.fb_in1k
+   Revision: 4
+   History entries: 8
+[📋] GENERAL STRATEGIC GUIDANCE: Using guidance
+
+OpenRouter Response Status: 200
+[🧠] MaskLLM N:M learned from 8 attempts:
+   attn_nm: 2:8 (25.0% dense)
+   mlp_nm:  1:6 (16.7% dense)
+   Estimated MACs: 0.496G
+[✅] ViT strategy complete: general_strategic_guidance
+[✅] Using LLM strategy directly - no safety overrides
+[⏱️] Completed: 3. Enhanced Analysis Agent in 6.86s
+[🛡️] Safety validation completed for cifar10
+[✅] No safety corrections needed - Analysis Agent provided compliant parameters
+
+[🔄] cifar10 step received: dict_keys(['analyze'])
+[🔄] Executing cifar10 pruning
+[⏱️] Starting: 4. Pruning Agent
+
+[🔧] Executing dataset-aware pruning with Analysis Agent recommendations...
+
+[🔧] Starting MaskLLM pruning pipeline...
+[🎯] Using MACs-first approach, target ratio will be derived
+[📏] Using round-to value: None
+[🔧] Using conservative default cifar10 isomorphic ratios: {'qkv_multiplier': 0.25, 'mlp_multiplier': 0.5, 'proj_multiplier': 0.0, 'head_multiplier': 0.0}
+[🎯] Direct N:M patterns from agent: attn={'N': 2, 'M': 8}, mlp={'N': 1, 'M': 6}
+[💻] Using device: cuda
+[💾] Creating deep copy of unpruned original model before pruning...
+[✅] Original unpruned model stored in state for later reattachment.
+
+[Phase 1] SparseGPT Initialization...
+[📊] Base model: 5,528,660 params, 1.266G MACs
+[🔄] Calculated target ratio from MACs: 0.5103
+[⚠️] Ratio 0.5103 was previously attempted, but Analysis Agent suggested it again.
+[🔍] Found 12 transformer blocks
+[📊] Total model MACs: 1.266G
+[📊] Target MACs: 0.620G
+[📊] Target ratio: 0.510
+[🔍] Found 24 MLP layers (3,538,944 total params)
+[📊] MLP MAC fraction estimated: 0.666 (3,538,944/5,312,256 params)
+[🔍] Found 24 attention layers (1,769,472 total params)
+[📊] Attention MAC fraction estimated: 0.333 (1,769,472/5,312,256 params)
+[🪫] Max feasible reduction under caps: 0.990 → best achievable ≈ 0.013G
+[🎯] LLM suggests: mlp_pruning=0.500, attn_pruning=0.250
+[🎯] Using as pruning ratios: r_mlp=0.500, r_attn=0.250
+[🎯] Predicted achievement: 0.417 (target: 0.510)
+[⚖️] Post-alloc solve -> r_mlp=0.500, r_attn=0.250 (mlp_frac=0.667, attn_frac=0.333, caps: 0.99/0.99)
+[📊] MLP: 0.844G → 0.422G (ratio: 0.500)
+[📊] Attention: 0.422G → 0.316G (ratio: 0.250)
+[📊] Final group summary:
+  - MLP blocks: 12 couples
+  - Attention blocks: 12 couples
+  - Output projections: 0 layers
+Replaced blocks.0.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.0.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.0.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.0.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.1.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.1.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.1.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.1.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.2.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.2.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.2.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.2.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.3.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.3.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.3.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.3.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.4.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.4.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.4.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.4.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.5.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.5.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.5.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.5.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.6.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.6.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.6.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.6.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.7.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.7.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.7.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.7.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.8.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.8.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.8.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.8.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.9.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.9.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.9.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.9.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.10.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.10.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.10.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.10.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.11.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.11.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.11.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.11.mlp.fc2: {'N': 1, 'M': 6}
+Replaced head_dist: {'N': 8, 'M': 9}
+Ready.
+0 attn.qkv
+Pruning ...
+time 6.06
+error 5.2724809646606445
+0 attn.proj
+Pruning ...
+time 0.08
+error 0.016750648617744446
+0 mlp.fc1
+Pruning ...
+time 0.08
+error 3.1654906272888184
+0 mlp.fc2
+Pruning ...
+time 0.33
+error 0.057103194296360016
+1 attn.qkv
+Pruning ...
+time 0.08
+error 6.6573076248168945
+1 attn.proj
+Pruning ...
+time 0.08
+error 0.01991487294435501
+1 mlp.fc1
+Pruning ...
+time 0.08
+error 3.91328763961792
+1 mlp.fc2
+Pruning ...
+time 0.32
+error 0.060843758285045624
+2 attn.qkv
+Pruning ...
+time 0.08
+error 7.492562770843506
+2 attn.proj
+Pruning ...
+time 0.08
+error 0.022675715386867523
+2 mlp.fc1
+Pruning ...
+time 0.08
+error 4.251524448394775
+2 mlp.fc2
+Pruning ...
+time 0.32
+error 0.06435509026050568
+3 attn.qkv
+Pruning ...
+time 0.08
+error 7.677332878112793
+3 attn.proj
+Pruning ...
+time 0.08
+error 0.025079071521759033
+3 mlp.fc1
+Pruning ...
+time 0.08
+error 4.3706769943237305
+3 mlp.fc2
+Pruning ...
+time 0.32
+error 0.06819581240415573
+4 attn.qkv
+Pruning ...
+time 0.08
+error 7.955620765686035
+4 attn.proj
+Pruning ...
+time 0.08
+error 0.027965154498815536
+4 mlp.fc1
+Pruning ...
+time 0.08
+error 4.5991058349609375
+4 mlp.fc2
+Pruning ...
+time 0.32
+error 0.06925573199987411
+5 attn.qkv
+Pruning ...
+time 0.08
+error 8.102570533752441
+5 attn.proj
+Pruning ...
+time 0.08
+error 0.024296145886182785
+5 mlp.fc1
+Pruning ...
+time 0.08
+error 4.579883575439453
+5 mlp.fc2
+Pruning ...
+time 0.32
+error 0.06649323552846909
+6 attn.qkv
+Pruning ...
+time 0.08
+error 8.73218822479248
+6 attn.proj
+Pruning ...
+time 0.08
+error 0.026370307430624962
+6 mlp.fc1
+Pruning ...
+time 0.08
+error 4.936572074890137
+6 mlp.fc2
+Pruning ...
+time 0.32
+error 0.07185538858175278
+7 attn.qkv
+Pruning ...
+time 0.08
+error 8.95455551147461
+7 attn.proj
+Pruning ...
+time 0.08
+error 0.027185827493667603
+7 mlp.fc1
+Pruning ...
+time 0.08
+error 4.996038436889648
+7 mlp.fc2
+Pruning ...
+time 0.32
+error 0.06846971064805984
+8 attn.qkv
+Pruning ...
+time 0.08
+error 9.07314395904541
+8 attn.proj
+Pruning ...
+time 0.08
+error 0.031207961961627007
+8 mlp.fc1
+Pruning ...
+time 0.08
+error 5.265722274780273
+8 mlp.fc2
+Pruning ...
+time 0.32
+error 0.06897130608558655
+9 attn.qkv
+Pruning ...
+time 0.08
+error 9.15890884399414
+9 attn.proj
+Pruning ...
+time 0.08
+error 0.033798281103372574
+9 mlp.fc1
+Pruning ...
+time 0.08
+error 5.254244804382324
+9 mlp.fc2
+Pruning ...
+time 0.32
+error 0.07235635817050934
+10 attn.qkv
+Pruning ...
+time 0.08
+error 9.416618347167969
+10 attn.proj
+Pruning ...
+time 0.08
+error 0.029591310769319534
+10 mlp.fc1
+Pruning ...
+time 0.08
+error 5.276885986328125
+10 mlp.fc2
+Pruning ...
+time 0.32
+error 0.07383759319782257
+11 attn.qkv
+Pruning ...
+time 0.08
+error 9.180658340454102
+11 attn.proj
+Pruning ...
+time 0.08
+error 0.029059071093797684
+11 mlp.fc1
+Pruning ...
+time 0.08
+error 5.201358795166016
+11 mlp.fc2
+Pruning ...
+time 0.32
+error 0.07843652367591858
+[✅] SparseGPT initialization complete
+  Layer blocks.0.attn.qkv sparsity: 0.250
+  Layer blocks.0.attn.proj sparsity: 0.250
+  Layer blocks.0.mlp.fc1 sparsity: 0.161
+  Layer blocks.0.mlp.fc2 sparsity: 0.164
+  Layer blocks.1.attn.qkv sparsity: 0.250
+  Layer blocks.1.attn.proj sparsity: 0.250
+  Layer blocks.1.mlp.fc1 sparsity: 0.161
+  Layer blocks.1.mlp.fc2 sparsity: 0.164
+  Layer blocks.2.attn.qkv sparsity: 0.250
+  Layer blocks.2.attn.proj sparsity: 0.250
+  Layer blocks.2.mlp.fc1 sparsity: 0.161
+  Layer blocks.2.mlp.fc2 sparsity: 0.164
+  Layer blocks.3.attn.qkv sparsity: 0.250
+  Layer blocks.3.attn.proj sparsity: 0.250
+  Layer blocks.3.mlp.fc1 sparsity: 0.161
+  Layer blocks.3.mlp.fc2 sparsity: 0.164
+  Layer blocks.4.attn.qkv sparsity: 0.250
+  Layer blocks.4.attn.proj sparsity: 0.250
+  Layer blocks.4.mlp.fc1 sparsity: 0.161
+  Layer blocks.4.mlp.fc2 sparsity: 0.164
+  Layer blocks.5.attn.qkv sparsity: 0.250
+  Layer blocks.5.attn.proj sparsity: 0.250
+  Layer blocks.5.mlp.fc1 sparsity: 0.161
+  Layer blocks.5.mlp.fc2 sparsity: 0.164
+  Layer blocks.6.attn.qkv sparsity: 0.250
+  Layer blocks.6.attn.proj sparsity: 0.250
+  Layer blocks.6.mlp.fc1 sparsity: 0.161
+  Layer blocks.6.mlp.fc2 sparsity: 0.164
+  Layer blocks.7.attn.qkv sparsity: 0.250
+  Layer blocks.7.attn.proj sparsity: 0.250
+  Layer blocks.7.mlp.fc1 sparsity: 0.161
+  Layer blocks.7.mlp.fc2 sparsity: 0.164
+  Layer blocks.8.attn.qkv sparsity: 0.250
+  Layer blocks.8.attn.proj sparsity: 0.250
+  Layer blocks.8.mlp.fc1 sparsity: 0.161
+  Layer blocks.8.mlp.fc2 sparsity: 0.164
+  Layer blocks.9.attn.qkv sparsity: 0.250
+  Layer blocks.9.attn.proj sparsity: 0.250
+  Layer blocks.9.mlp.fc1 sparsity: 0.161
+  Layer blocks.9.mlp.fc2 sparsity: 0.164
+  Layer blocks.10.attn.qkv sparsity: 0.250
+  Layer blocks.10.attn.proj sparsity: 0.250
+  Layer blocks.10.mlp.fc1 sparsity: 0.161
+  Layer blocks.10.mlp.fc2 sparsity: 0.164
+  Layer blocks.11.attn.qkv sparsity: 0.250
+  Layer blocks.11.attn.proj sparsity: 0.250
+  Layer blocks.11.mlp.fc1 sparsity: 0.161
+  Layer blocks.11.mlp.fc2 sparsity: 0.164
+  Layer head_dist sparsity: 0.000
+
+[Phase 2] MaskLLM Mask Learning...
+Replaced blocks.0.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.0.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.0.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.0.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.1.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.1.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.1.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.1.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.2.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.2.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.2.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.2.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.3.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.3.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.3.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.3.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.4.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.4.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.4.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.4.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.5.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.5.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.5.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.5.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.6.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.6.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.6.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.6.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.7.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.7.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.7.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.7.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.8.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.8.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.8.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.8.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.9.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.9.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.9.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.9.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.10.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.10.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.10.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.10.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.11.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.11.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.11.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.11.mlp.fc2: {'N': 1, 'M': 6}
+Replaced head: {'N': 8, 'M': 9}
+Replaced head_dist: {'N': 8, 'M': 9}
+[📊] MaskLLM model (before training):
+  Total params:  15,264,590
+  Weight params: 5,528,660
+  Gate params:   9,735,930 (63.78%)
+  blocks.0.attn.qkv: N=2, M=8, C(M,N)=28, blocks=13,824, gate_params=387,072
+  blocks.0.attn.proj: N=2, M=8, C(M,N)=28, blocks=4,608, gate_params=129,024
+  blocks.0.mlp.fc1: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.0.mlp.fc2: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.1.attn.qkv: N=2, M=8, C(M,N)=28, blocks=13,824, gate_params=387,072
+  blocks.1.attn.proj: N=2, M=8, C(M,N)=28, blocks=4,608, gate_params=129,024
+  blocks.1.mlp.fc1: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.1.mlp.fc2: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.2.attn.qkv: N=2, M=8, C(M,N)=28, blocks=13,824, gate_params=387,072
+  blocks.2.attn.proj: N=2, M=8, C(M,N)=28, blocks=4,608, gate_params=129,024
+  blocks.2.mlp.fc1: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.2.mlp.fc2: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.3.attn.qkv: N=2, M=8, C(M,N)=28, blocks=13,824, gate_params=387,072
+  blocks.3.attn.proj: N=2, M=8, C(M,N)=28, blocks=4,608, gate_params=129,024
+  blocks.3.mlp.fc1: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.3.mlp.fc2: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.4.attn.qkv: N=2, M=8, C(M,N)=28, blocks=13,824, gate_params=387,072
+  blocks.4.attn.proj: N=2, M=8, C(M,N)=28, blocks=4,608, gate_params=129,024
+  blocks.4.mlp.fc1: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.4.mlp.fc2: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.5.attn.qkv: N=2, M=8, C(M,N)=28, blocks=13,824, gate_params=387,072
+  blocks.5.attn.proj: N=2, M=8, C(M,N)=28, blocks=4,608, gate_params=129,024
+  blocks.5.mlp.fc1: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.5.mlp.fc2: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.6.attn.qkv: N=2, M=8, C(M,N)=28, blocks=13,824, gate_params=387,072
+  blocks.6.attn.proj: N=2, M=8, C(M,N)=28, blocks=4,608, gate_params=129,024
+  blocks.6.mlp.fc1: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.6.mlp.fc2: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.7.attn.qkv: N=2, M=8, C(M,N)=28, blocks=13,824, gate_params=387,072
+  blocks.7.attn.proj: N=2, M=8, C(M,N)=28, blocks=4,608, gate_params=129,024
+  blocks.7.mlp.fc1: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.7.mlp.fc2: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.8.attn.qkv: N=2, M=8, C(M,N)=28, blocks=13,824, gate_params=387,072
+  blocks.8.attn.proj: N=2, M=8, C(M,N)=28, blocks=4,608, gate_params=129,024
+  blocks.8.mlp.fc1: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.8.mlp.fc2: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.9.attn.qkv: N=2, M=8, C(M,N)=28, blocks=13,824, gate_params=387,072
+  blocks.9.attn.proj: N=2, M=8, C(M,N)=28, blocks=4,608, gate_params=129,024
+  blocks.9.mlp.fc1: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.9.mlp.fc2: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.10.attn.qkv: N=2, M=8, C(M,N)=28, blocks=13,824, gate_params=387,072
+  blocks.10.attn.proj: N=2, M=8, C(M,N)=28, blocks=4,608, gate_params=129,024
+  blocks.10.mlp.fc1: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.10.mlp.fc2: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.11.attn.qkv: N=2, M=8, C(M,N)=28, blocks=13,824, gate_params=387,072
+  blocks.11.attn.proj: N=2, M=8, C(M,N)=28, blocks=4,608, gate_params=129,024
+  blocks.11.mlp.fc1: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  blocks.11.mlp.fc2: N=1, M=6, C(M,N)=6, blocks=24,576, gate_params=147,456
+  head: N=8, M=9, C(M,N)=9, blocks=213, gate_params=1,917
+  head_dist: N=8, M=9, C(M,N)=9, blocks=213, gate_params=1,917
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([13824, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([4608, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.1615
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.1641
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([13824, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([4608, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.1615
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.1641
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([13824, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([4608, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.1615
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.1641
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([13824, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([4608, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.1615
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.1641
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([13824, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([4608, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.1615
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.1641
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([13824, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([4608, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.1615
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.1641
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([13824, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([4608, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.1615
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.1641
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([13824, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([4608, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.1615
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.1641
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([13824, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([4608, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.1615
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.1641
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([13824, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([4608, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.1615
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.1641
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([13824, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([4608, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.1615
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.1641
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([13824, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.2500
+Block shape: torch.Size([4608, 28])
+initializing with prior (strength=3), Prior Sparsity: 0.1615
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.1641
+Block shape: torch.Size([24576, 6])
+initializing with prior (strength=3), Prior Sparsity: 0.0000
+Block shape: torch.Size([213, 9])
+initializing with prior (strength=3), Prior Sparsity: 0.0000
+Block shape: torch.Size([213, 9])
+[🔒] Freezing all parameters except .gate...
+[🎯] MaskLLM training: 10 epochs, lr=0.001
+[Epoch 0/10] tau=4.000, scaling=10.0
+[Epoch 0] Loss: 2.1377, Top-1: 23.68%, Top-5: 70.16%
+[Epoch 1/10] tau=3.561, scaling=20.0
+[Epoch 1] Loss: 2.0475, Top-1: 24.03%, Top-5: 77.19%
+[Epoch 2/10] tau=3.122, scaling=30.0
+[Epoch 2] Loss: 1.9085, Top-1: 31.71%, Top-5: 81.06%
+[Epoch 3/10] tau=2.683, scaling=40.0
+[Epoch 3] Loss: 1.7501, Top-1: 36.70%, Top-5: 87.64%
+[Epoch 4/10] tau=2.244, scaling=50.0
+[Epoch 4] Loss: 1.7190, Top-1: 38.63%, Top-5: 87.77%
+[Epoch 5/10] tau=1.806, scaling=60.0
+[Epoch 5] Loss: 1.6601, Top-1: 41.12%, Top-5: 88.89%
+[Epoch 6/10] tau=1.367, scaling=70.0
+[Epoch 6] Loss: 1.6211, Top-1: 42.65%, Top-5: 90.12%
+[Epoch 7/10] tau=0.928, scaling=80.0
+[Epoch 7] Loss: 1.5863, Top-1: 44.04%, Top-5: 90.91%
+[Epoch 8/10] tau=0.489, scaling=90.0
+[Epoch 8] Loss: 1.5999, Top-1: 43.32%, Top-5: 90.13%
+[Epoch 9/10] tau=0.050, scaling=100.0
+[Epoch 9] Loss: 1.5821, Top-1: 44.03%, Top-5: 90.79%
+[✅] MaskLLM training complete
+
+[Phase 3] Extracting learned masks...
+Replaced blocks.0.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.0.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.0.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.0.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.1.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.1.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.1.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.1.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.2.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.2.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.2.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.2.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.3.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.3.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.3.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.3.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.4.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.4.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.4.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.4.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.5.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.5.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.5.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.5.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.6.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.6.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.6.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.6.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.7.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.7.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.7.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.7.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.8.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.8.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.8.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.8.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.9.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.9.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.9.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.9.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.10.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.10.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.10.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.10.mlp.fc2: {'N': 1, 'M': 6}
+Replaced blocks.11.attn.qkv: {'N': 2, 'M': 8}
+Replaced blocks.11.attn.proj: {'N': 2, 'M': 8}
+Replaced blocks.11.mlp.fc1: {'N': 1, 'M': 6}
+Replaced blocks.11.mlp.fc2: {'N': 1, 'M': 6}
+Replaced head: {'N': 8, 'M': 9}
+Replaced head_dist: {'N': 8, 'M': 9}
+[📊] Frozen model (after training):
+  Total params:  5,528,660
+  Gate params removed: 9,735,930
+  Param reduction: 63.78% fewer than MaskLLM model
+[✅] Final model created with learned frozen masks
+  Final blocks.0.attn.qkv sparsity: 0.750
+  Final blocks.0.attn.proj sparsity: 0.750
+  Final blocks.0.mlp.fc1 sparsity: 0.833
+  Final blocks.0.mlp.fc2 sparsity: 0.833
+  Final blocks.1.attn.qkv sparsity: 0.750
+  Final blocks.1.attn.proj sparsity: 0.750
+  Final blocks.1.mlp.fc1 sparsity: 0.833
+  Final blocks.1.mlp.fc2 sparsity: 0.833
+  Final blocks.2.attn.qkv sparsity: 0.750
+  Final blocks.2.attn.proj sparsity: 0.750
+  Final blocks.2.mlp.fc1 sparsity: 0.833
+  Final blocks.2.mlp.fc2 sparsity: 0.833
+  Final blocks.3.attn.qkv sparsity: 0.750
+  Final blocks.3.attn.proj sparsity: 0.750
+  Final blocks.3.mlp.fc1 sparsity: 0.833
+  Final blocks.3.mlp.fc2 sparsity: 0.833
+  Final blocks.4.attn.qkv sparsity: 0.750
+  Final blocks.4.attn.proj sparsity: 0.750
+  Final blocks.4.mlp.fc1 sparsity: 0.833
+  Final blocks.4.mlp.fc2 sparsity: 0.833
+  Final blocks.5.attn.qkv sparsity: 0.750
+  Final blocks.5.attn.proj sparsity: 0.750
+  Final blocks.5.mlp.fc1 sparsity: 0.833
+  Final blocks.5.mlp.fc2 sparsity: 0.833
+  Final blocks.6.attn.qkv sparsity: 0.750
+  Final blocks.6.attn.proj sparsity: 0.750
+  Final blocks.6.mlp.fc1 sparsity: 0.833
+  Final blocks.6.mlp.fc2 sparsity: 0.833
+  Final blocks.7.attn.qkv sparsity: 0.750
+  Final blocks.7.attn.proj sparsity: 0.750
+  Final blocks.7.mlp.fc1 sparsity: 0.833
+  Final blocks.7.mlp.fc2 sparsity: 0.833
+  Final blocks.8.attn.qkv sparsity: 0.750
+  Final blocks.8.attn.proj sparsity: 0.750
+  Final blocks.8.mlp.fc1 sparsity: 0.833
+  Final blocks.8.mlp.fc2 sparsity: 0.833
+  Final blocks.9.attn.qkv sparsity: 0.750
+  Final blocks.9.attn.proj sparsity: 0.750
+  Final blocks.9.mlp.fc1 sparsity: 0.833
+  Final blocks.9.mlp.fc2 sparsity: 0.833
+  Final blocks.10.attn.qkv sparsity: 0.750
+  Final blocks.10.attn.proj sparsity: 0.750
+  Final blocks.10.mlp.fc1 sparsity: 0.833
+  Final blocks.10.mlp.fc2 sparsity: 0.833
+  Final blocks.11.attn.qkv sparsity: 0.750
+  Final blocks.11.attn.proj sparsity: 0.750
+  Final blocks.11.mlp.fc1 sparsity: 0.833
+  Final blocks.11.mlp.fc2 sparsity: 0.833
+  Final head sparsity: 0.111
+  Final head_dist sparsity: 0.111
+
+[Phase 4] Evaluating final MaskLLM model...
+[🎯] Zero-shot accuracy: 44.04%
+[📊] MaskLLM model accuracy: 44.04%
+[📊] MACs: 1.266G -> 0.565G (reduction: 55.3%)
+[💾] Saved MaskLLM checkpoint: /work/hdd/bfxa/dshah13/expf_cl/deit_tiny_distilled_patch16_224.fb_in1k_cifar10_macs0p62g/job_16217111/checkpoints/maskllm_deit_tiny_distilled_patch16_224.fb_in1k_cifar10_rev4.pth
+
+[📊] MaskLLM Pruning Results Summary:
+  MACs reduction: 55.34%
+  MaskLLM accuracy: 44.04%
+[⏱️] Completed: 4. Pruning Agent in 839.06s
+[✅] Achieved 0.565G MACs, meets target 620000000.000G (error: -8.8%)
+[🔧] Patched attention forward for blocks.0.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.1.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.2.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.3.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.4.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.5.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.6.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.7.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.8.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.9.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.10.attn (head_dim: 64)
+[🔧] Patched attention forward for blocks.11.attn (head_dim: 64)
+[💾] Stored pruned model in MODEL_STORE
+[✅] MACs WITHIN TOLERANCE:
+   Achieved: 0.565G vs Target: 0.620G
+   Error: -8.80% (tolerance: +1.0%/-20.0%)
+   Zero-shot accuracy: 44.04% - proceeding to fine-tune
+
+[🔄] cifar10 step received: dict_keys(['prune'])
+[🔄] Fine-tuning cifar10 model
+[⏱️] Starting: 5. Fine-tuning Agent
+
+[🔄] Starting REVISED CIFAR10 fine-tuning process...
+[💻] Fine-tuning on device: cuda
+[🔍] Model type: ViT
+[🔧] Using LR 0.0005 for 55.3% pruned model
+[🧮] Using AdamW optimizer for ViT
+[🎯] Simple fine-tuning: 30 epochs, LR 0.0005
+
+[📊] Epoch 1/30
+[🔄] Batch 0: Loss 1.580, Acc 46.88%
+[🔄] Batch 100: Loss 1.522, Acc 43.14%
+[🔄] Batch 200: Loss 1.574, Acc 43.76%
+[🔄] Batch 300: Loss 1.651, Acc 44.28%
+[📊] Validation: Accuracy 44.02%
+[✅] New best: 44.02%
+
+[📊] Epoch 2/30
+[🔄] Batch 0: Loss 1.504, Acc 50.00%
+[🔄] Batch 100: Loss 1.777, Acc 40.03%
+[🔄] Batch 200: Loss 1.765, Acc 41.08%
+[🔄] Batch 300: Loss 1.616, Acc 42.17%
+[📊] Validation: Accuracy 44.77%
+[✅] New best: 44.77%
+
+[📊] Epoch 3/30
+[🔄] Batch 0: Loss 1.593, Acc 44.53%
+[🔄] Batch 100: Loss 1.534, Acc 44.12%
+[🔄] Batch 200: Loss 1.633, Acc 45.08%
+[🔄] Batch 300: Loss 1.623, Acc 45.78%
+[📊] Validation: Accuracy 48.32%
+[✅] New best: 48.32%
+
+[📊] Epoch 4/30
+[🔄] Batch 0: Loss 1.476, Acc 45.31%
+[🔄] Batch 100: Loss 1.510, Acc 50.82%
+[🔄] Batch 200: Loss 1.457, Acc 51.13%
+[🔄] Batch 300: Loss 1.381, Acc 51.46%
+[📊] Validation: Accuracy 54.89%
+[✅] New best: 54.89%
+
+[📊] Epoch 5/30
+[🔄] Batch 0: Loss 1.422, Acc 53.91%
+[🔄] Batch 100: Loss 1.435, Acc 54.36%
+[🔄] Batch 200: Loss 1.452, Acc 54.76%
+[🔄] Batch 300: Loss 1.651, Acc 54.79%
+[📊] Validation: Accuracy 56.74%
+[✅] New best: 56.74%
+
+[📊] Epoch 6/30
+[🔄] Batch 0: Loss 1.232, Acc 59.38%
+[🔄] Batch 100: Loss 1.308, Acc 57.09%
+[🔄] Batch 200: Loss 1.269, Acc 56.96%
+[🔄] Batch 300: Loss 1.363, Acc 57.29%
+[📊] Validation: Accuracy 56.42%
+[📉] No improvement for 1/5 epochs (best: 56.74%)
+
+[📊] Epoch 7/30
+[🔄] Batch 0: Loss 1.297, Acc 55.47%
+[🔄] Batch 100: Loss 1.247, Acc 59.15%
+[🔄] Batch 200: Loss 1.286, Acc 59.11%
+[🔄] Batch 300: Loss 1.235, Acc 59.14%
+[📊] Validation: Accuracy 60.12%
+[✅] New best: 60.12%
+
+[📊] Epoch 8/30
+[🔄] Batch 0: Loss 1.302, Acc 60.94%
+[🔄] Batch 100: Loss 1.117, Acc 60.58%
+[🔄] Batch 200: Loss 1.278, Acc 60.66%
+[🔄] Batch 300: Loss 1.284, Acc 60.85%
+[📊] Validation: Accuracy 60.81%
+[✅] New best: 60.81%
+
+[📊] Epoch 9/30
+[🔄] Batch 0: Loss 1.265, Acc 64.06%
+[🔄] Batch 100: Loss 1.250, Acc 62.56%
+[🔄] Batch 200: Loss 1.157, Acc 62.41%
+[🔄] Batch 300: Loss 1.224, Acc 62.43%
+[📊] Validation: Accuracy 62.20%
+[✅] New best: 62.20%
+
+[📊] Epoch 10/30
+[🔄] Batch 0: Loss 1.144, Acc 67.97%
+[🔄] Batch 100: Loss 1.118, Acc 64.12%
+[🔄] Batch 200: Loss 1.091, Acc 64.73%
+[🔄] Batch 300: Loss 1.252, Acc 64.60%
+[📊] Validation: Accuracy 63.93%
+[✅] New best: 63.93%
+
+[📊] Epoch 11/30
+[🔄] Batch 0: Loss 1.018, Acc 75.00%
+[🔄] Batch 100: Loss 1.139, Acc 65.87%
+[🔄] Batch 200: Loss 1.087, Acc 65.78%
+[🔄] Batch 300: Loss 1.197, Acc 65.74%
+[📊] Validation: Accuracy 65.38%
+[✅] New best: 65.38%
+
+[📊] Epoch 12/30
+[🔄] Batch 0: Loss 0.992, Acc 72.66%
+[🔄] Batch 100: Loss 1.031, Acc 67.15%
+[🔄] Batch 200: Loss 1.197, Acc 66.93%
+[🔄] Batch 300: Loss 1.049, Acc 67.04%
+[📊] Validation: Accuracy 66.31%
+[✅] New best: 66.31%
+
+[📊] Epoch 13/30
+[🔄] Batch 0: Loss 1.026, Acc 69.53%
+[🔄] Batch 100: Loss 1.161, Acc 67.95%
+[🔄] Batch 200: Loss 1.217, Acc 67.82%
+[🔄] Batch 300: Loss 1.226, Acc 67.70%
+[📊] Validation: Accuracy 68.34%
+[✅] New best: 68.34%
+
+[📊] Epoch 14/30
+[🔄] Batch 0: Loss 1.025, Acc 69.53%
+[🔄] Batch 100: Loss 0.960, Acc 69.48%
+[🔄] Batch 200: Loss 1.016, Acc 69.14%
+[🔄] Batch 300: Loss 0.990, Acc 68.94%
+[📊] Validation: Accuracy 67.61%
+[📉] No improvement for 1/5 epochs (best: 68.34%)
+
+[📊] Epoch 15/30
+[🔄] Batch 0: Loss 1.041, Acc 64.84%
+[🔄] Batch 100: Loss 0.955, Acc 70.19%
+[🔄] Batch 200: Loss 0.994, Acc 70.09%
+[🔄] Batch 300: Loss 1.081, Acc 70.15%
+[📊] Validation: Accuracy 68.75%
+[✅] New best: 68.75%
+
+[📊] Epoch 16/30
+[🔄] Batch 0: Loss 0.904, Acc 75.00%
+[🔄] Batch 100: Loss 0.936, Acc 71.62%
+[🔄] Batch 200: Loss 1.185, Acc 71.33%
+[🔄] Batch 300: Loss 1.031, Acc 71.41%
+[📊] Validation: Accuracy 69.24%
+[✅] New best: 69.24%
+
+[📊] Epoch 17/30
+[🔄] Batch 0: Loss 1.004, Acc 71.09%
+[🔄] Batch 100: Loss 0.939, Acc 71.71%
+[🔄] Batch 200: Loss 1.085, Acc 71.93%
+[🔄] Batch 300: Loss 1.061, Acc 71.88%
+[📊] Validation: Accuracy 69.31%
+[✅] New best: 69.31%
+
+[📊] Epoch 18/30
+[🔄] Batch 0: Loss 0.908, Acc 71.88%
+[🔄] Batch 100: Loss 1.006, Acc 72.52%
+[🔄] Batch 200: Loss 1.022, Acc 72.52%
+[🔄] Batch 300: Loss 0.738, Acc 72.69%
+[📊] Validation: Accuracy 70.24%
+[✅] New best: 70.24%
+
+[📊] Epoch 19/30
+[🔄] Batch 0: Loss 0.896, Acc 76.56%
+[🔄] Batch 100: Loss 0.881, Acc 73.99%
+[🔄] Batch 200: Loss 0.992, Acc 73.66%
+[🔄] Batch 300: Loss 1.001, Acc 73.63%
+[📊] Validation: Accuracy 70.95%
+[✅] New best: 70.95%
+
+[📊] Epoch 20/30
+[🔄] Batch 0: Loss 0.990, Acc 68.75%
+[🔄] Batch 100: Loss 0.904, Acc 74.08%
+[🔄] Batch 200: Loss 0.879, Acc 74.44%
+[🔄] Batch 300: Loss 0.874, Acc 74.26%
+[📊] Validation: Accuracy 72.40%
+[✅] New best: 72.40%
+
+[📊] Epoch 21/30
+[🔄] Batch 0: Loss 0.963, Acc 66.41%
+[🔄] Batch 100: Loss 0.902, Acc 75.32%
+[🔄] Batch 200: Loss 0.987, Acc 75.27%
+[🔄] Batch 300: Loss 1.127, Acc 75.21%
+[📊] Validation: Accuracy 72.24%
+[📉] No improvement for 1/5 epochs (best: 72.40%)
+
+[📊] Epoch 22/30
+[🔄] Batch 0: Loss 0.868, Acc 72.66%
+[🔄] Batch 100: Loss 0.995, Acc 76.22%
+[🔄] Batch 200: Loss 0.926, Acc 76.19%
+[🔄] Batch 300: Loss 0.802, Acc 76.06%
+[📊] Validation: Accuracy 74.26%
+[✅] New best: 74.26%
+
+[📊] Epoch 23/30
+[🔄] Batch 0: Loss 0.916, Acc 75.78%
+[🔄] Batch 100: Loss 0.847, Acc 76.41%
+[🔄] Batch 200: Loss 0.891, Acc 76.64%
+[🔄] Batch 300: Loss 0.921, Acc 76.54%
+[📊] Validation: Accuracy 72.88%
+[📉] No improvement for 1/5 epochs (best: 74.26%)
+
+[📊] Epoch 24/30
+[🔄] Batch 0: Loss 0.772, Acc 80.47%
+[🔄] Batch 100: Loss 0.928, Acc 77.78%
+[🔄] Batch 200: Loss 0.821, Acc 77.35%
+[🔄] Batch 300: Loss 0.817, Acc 77.24%
+[📊] Validation: Accuracy 74.00%
+[📉] No improvement for 2/5 epochs (best: 74.26%)
+
+[📊] Epoch 25/30
+[🔄] Batch 0: Loss 0.792, Acc 78.91%
+[🔄] Batch 100: Loss 0.851, Acc 77.84%
+[🔄] Batch 200: Loss 0.758, Acc 77.73%
+[🔄] Batch 300: Loss 0.909, Acc 77.48%
+[📊] Validation: Accuracy 73.98%
+[📉] No improvement for 3/5 epochs (best: 74.26%)
+
+[📊] Epoch 26/30
+[🔄] Batch 0: Loss 0.842, Acc 76.56%
+[🔄] Batch 100: Loss 0.746, Acc 77.65%
+[🔄] Batch 200: Loss 0.868, Acc 78.11%
+[🔄] Batch 300: Loss 0.866, Acc 78.18%
+[📊] Validation: Accuracy 74.86%
+[✅] New best: 74.86%
+
+[📊] Epoch 27/30
+[🔄] Batch 0: Loss 0.742, Acc 82.03%
+[🔄] Batch 100: Loss 0.683, Acc 78.37%
+[🔄] Batch 200: Loss 0.954, Acc 78.48%
+[🔄] Batch 300: Loss 0.795, Acc 78.42%
+[📊] Validation: Accuracy 74.49%
+[📉] No improvement for 1/5 epochs (best: 74.86%)
+
+[📊] Epoch 28/30
+[🔄] Batch 0: Loss 0.848, Acc 75.78%
+[🔄] Batch 100: Loss 0.917, Acc 79.15%
+[🔄] Batch 200: Loss 0.768, Acc 78.96%
+[🔄] Batch 300: Loss 0.822, Acc 79.09%
+[📊] Validation: Accuracy 75.14%
+[✅] New best: 75.14%
+
+[📊] Epoch 29/30
+[🔄] Batch 0: Loss 0.876, Acc 76.56%
+[🔄] Batch 100: Loss 0.824, Acc 79.22%
+[🔄] Batch 200: Loss 0.795, Acc 79.21%
+[🔄] Batch 300: Loss 0.851, Acc 79.08%
