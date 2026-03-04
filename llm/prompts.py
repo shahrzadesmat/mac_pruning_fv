@@ -190,8 +190,8 @@ KEY MAC ALLOCATION PARAMETERS TO CONSIDER:
 1. MAC Budget Allocation: The distribution of MAC operations across different layer types.
    - Target: {target_macs:.3f}G operations (+{macs_overshoot_tolerance_pct:.1f}%/-{macs_undershoot_tolerance_pct:.1f}% tolerance)
    - Baseline: {baseline_macs:.3f}G operations
-   - MAC efficiency target: {(target_macs / baseline_macs * 100):.1f}% of baseline
-   - Acceptable range: {target_macs * (1 - macs_undershoot_tolerance_pct / 100):.3f}G - {target_macs * (1 + macs_overshoot_tolerance_pct / 100):.3f}G
+   - MAC efficiency target: {mac_efficiency_target:.1f}% of baseline
+   - Acceptable range: {acceptable_macs_range}
 
 2. Channel Pruning Ratio (for CNNs): Controls MAC reduction through channel pruning.
    - Value between 0.0 and 1.0 (e.g., 0.5 means 50% channel reduction)
@@ -1149,6 +1149,18 @@ MAC Focus: Achieve {target_macs:.3f}G +{macs_overshoot_tolerance_pct:.1f}%/-{mac
     else:
         previous_strategies = f"No previous MAC attempts - this is the first iteration targeting {target_macs:.3f}G."
     
+    # Pre-compute values needed by ANALYSIS_PROMPT template
+    mac_efficiency_target = (target_macs / baseline_macs * 100) if baseline_macs else 0.0
+    acceptable_macs_range = (
+        f"{target_macs * (1 - macs_undershoot_tolerance_pct / 100):.3f}G"
+        f" - "
+        f"{target_macs * (1 + macs_overshoot_tolerance_pct / 100):.3f}G"
+    ) if target_macs else "N/A"
+    if master_suggested_round_to is not None:
+        effective_round_to = master_suggested_round_to
+    else:
+        effective_round_to = 2 if current_revision < 3 else random.choice([1, 4, 8, 16, 'null'])
+
     # Create the complete MAC-based prompt
     prompt_text = ANALYSIS_PROMPT.format(
         model_name=model_name,
@@ -1160,6 +1172,9 @@ MAC Focus: Achieve {target_macs:.3f}G +{macs_overshoot_tolerance_pct:.1f}%/-{mac
         baseline_macs=baseline_macs,
         macs_overshoot_tolerance_pct=macs_overshoot_tolerance_pct,
         macs_undershoot_tolerance_pct=macs_undershoot_tolerance_pct,
+        mac_efficiency_target=mac_efficiency_target,
+        acceptable_macs_range=acceptable_macs_range,
+        effective_round_to=effective_round_to,
         revision_context=revision_context,
         architecture_specific_guidance=arch_content['architecture_specific_guidance'],
         master_directives=state.get('master_results', {}).get('directives', ''),
