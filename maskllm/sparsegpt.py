@@ -286,7 +286,9 @@ def get_layer_sparsity(layer_name, groups, default_n, default_m,
     if 'attn' in name_parts:
         if 'qkv' in name_parts or 'proj' in name_parts:
             if attn_nm is not None:
-                return attn_nm['N'], attn_nm['M']
+                # attn_nm['N'] = kept weights; fasterprune's prunen = zeroed weights = M - N
+                N, M = attn_nm['N'], attn_nm['M']
+                return M - N, M
             if groups is not None and 'attention_blocks' in groups:
                 ratio = groups['attention_blocks'].pruning_ratio
                 return ratio_to_nm(ratio)
@@ -295,7 +297,9 @@ def get_layer_sparsity(layer_name, groups, default_n, default_m,
     elif 'mlp' in name_parts:
         if 'fc1' in name_parts or 'fc2' in name_parts:
             if mlp_nm is not None:
-                return mlp_nm['N'], mlp_nm['M']
+                # mlp_nm['N'] = kept weights; fasterprune's prunen = zeroed weights = M - N
+                N, M = mlp_nm['N'], mlp_nm['M']
+                return M - N, M
             if groups is not None and 'mlp_blocks' in groups:
                 ratio = groups['mlp_blocks'].pruning_ratio
                 return ratio_to_nm(ratio)
@@ -324,7 +328,7 @@ def ratio_to_nm(pruning_ratio):
       60.0%     3:5   >= 0.586
       57.1%     4:7   >= 0.564
       55.6%     5:9   >= 0.528
-      50.0%     4:8   >= 0.472
+      50.0%     2:4   >= 0.472
       44.4%     4:9   >= 0.437
       42.9%     3:7   >= 0.414
       40.0%     2:5   >= 0.388
@@ -341,57 +345,59 @@ def ratio_to_nm(pruning_ratio):
     """
     density = 1 - pruning_ratio
 
+    # Returns (prunen, prunem) where prunen = weights to ZERO = M - kept_N.
+    # fasterprune zeros out `prunen` smallest weights per block of `prunem`.
     if density >= 0.882:
-        return 8, 9   # 88.9% dense
+        return 1, 9   # 88.9% dense: keep 8, prune 1
     elif density >= 0.866:
-        return 7, 8   # 87.5% dense
+        return 1, 8   # 87.5% dense: keep 7, prune 1
     elif density >= 0.845:
-        return 6, 7   # 85.7% dense
+        return 1, 7   # 85.7% dense: keep 6, prune 1
     elif density >= 0.817:
-        return 5, 6   # 83.3% dense
+        return 1, 6   # 83.3% dense: keep 5, prune 1
     elif density >= 0.789:
-        return 4, 5   # 80.0% dense
+        return 1, 5   # 80.0% dense: keep 4, prune 1
     elif density >= 0.764:
-        return 7, 9   # 77.8% dense
+        return 2, 9   # 77.8% dense: keep 7, prune 2
     elif density >= 0.732:
-        return 6, 8   # 75.0% dense
+        return 2, 8   # 75.0% dense: keep 6, prune 2
     elif density >= 0.691:
-        return 5, 7   # 71.4% dense
+        return 2, 7   # 71.4% dense: keep 5, prune 2
     elif density >= 0.646:
-        return 4, 6   # 66.7% dense
+        return 2, 6   # 66.7% dense: keep 4, prune 2
     elif density >= 0.613:
-        return 5, 8   # 62.5% dense
+        return 3, 8   # 62.5% dense: keep 5, prune 3
     elif density >= 0.586:
-        return 3, 5   # 60.0% dense
+        return 2, 5   # 60.0% dense: keep 3, prune 2
     elif density >= 0.564:
-        return 4, 7   # 57.1% dense
+        return 3, 7   # 57.1% dense: keep 4, prune 3
     elif density >= 0.528:
-        return 5, 9   # 55.6% dense
+        return 4, 9   # 55.6% dense: keep 5, prune 4
     elif density >= 0.472:
-        return 4, 8   # 50.0% dense
+        return 2, 4   # 50.0% dense: keep 2, prune 2
     elif density >= 0.437:
-        return 4, 9   # 44.4% dense
+        return 5, 9   # 44.4% dense: keep 4, prune 5
     elif density >= 0.414:
-        return 3, 7   # 42.9% dense
+        return 4, 7   # 42.9% dense: keep 3, prune 4
     elif density >= 0.388:
-        return 2, 5   # 40.0% dense
+        return 3, 5   # 40.0% dense: keep 2, prune 3
     elif density >= 0.354:
-        return 3, 8   # 37.5% dense
+        return 5, 8   # 37.5% dense: keep 3, prune 5
     elif density >= 0.310:
-        return 2, 6   # 33.3% dense
+        return 4, 6   # 33.3% dense: keep 2, prune 4
     elif density >= 0.268:
-        return 2, 7   # 28.6% dense
+        return 5, 7   # 28.6% dense: keep 2, prune 5
     elif density >= 0.236:
-        return 2, 8   # 25.0% dense
+        return 6, 8   # 25.0% dense: keep 2, prune 6
     elif density >= 0.211:
-        return 2, 9   # 22.2% dense
+        return 7, 9   # 22.2% dense: keep 2, prune 7
     elif density >= 0.183:
-        return 1, 5   # 20.0% dense
+        return 4, 5   # 20.0% dense: keep 1, prune 4
     elif density >= 0.155:
-        return 1, 6   # 16.7% dense
+        return 5, 6   # 16.7% dense: keep 1, prune 5
     elif density >= 0.134:
-        return 1, 7   # 14.3% dense
+        return 6, 7   # 14.3% dense: keep 1, prune 6
     elif density >= 0.118:
-        return 1, 8   # 12.5% dense
+        return 7, 8   # 12.5% dense: keep 1, prune 7
     else:
-        return 1, 9   # 11.1% dense
+        return 8, 9   # 11.1% dense: keep 1, prune 8

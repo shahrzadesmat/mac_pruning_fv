@@ -68,6 +68,33 @@ class AnalysisAgent:
         
         return True, "Configuration appears safe"
 
+    # 27-level N:M table ordered dense → sparse (matches the prompt table)
+    _NM_TABLE = [
+        (8,9),(7,8),(6,7),(5,6),(4,5),
+        (7,9),(6,8),(5,7),(4,6),(5,8),
+        (3,5),(4,7),(5,9),(2,4),(4,9),
+        (3,7),(2,5),(3,8),(2,6),(2,7),
+        (2,8),(2,9),(1,5),(1,6),(1,7),
+        (1,8),(1,9),
+    ]
+
+    def _maskllm_pick_untried_nm(self, cur_attn, cur_mlp, tried_keys):
+        """
+        Pick the closest untried mlp N:M combination.
+        tried_keys contains 2-tuples (mlp_N, mlp_M).
+        Returns (mlp_N, mlp_M) or None if table exhausted.
+        """
+        cur_mlp_idx = next(
+            (i for i, nm in enumerate(self._NM_TABLE) if nm == (cur_mlp.get('N'), cur_mlp.get('M'))),
+            len(self._NM_TABLE) // 2  # fallback to middle
+        )
+        for offset in range(1, len(self._NM_TABLE)):
+            mlp_candidate = self._NM_TABLE[(cur_mlp_idx + offset) % len(self._NM_TABLE)]
+            if mlp_candidate not in tried_keys:
+                return mlp_candidate
+        return None
+
+
     def _force_safe_complete_strategy(self, strategy_dict, avoid_complete_signatures, target_ratio, dataset):
         """Generate a strategy that avoids ALL failed complete signatures"""
         
@@ -147,7 +174,9 @@ class AnalysisAgent:
         target_ratio = state.get('target_pruning_ratio')
         if target_ratio is None and baseline_macs and target_macs:
             target_ratio = (baseline_macs - target_macs) / baseline_macs
-            print(f"[🔧] Calculated target ratio from MACs: {target_ratio:.3f} ({target_ratio*100:.1f}%)")
+            # Only log this for structural/CNN paths — MaskLLM uses MACs directly, not ratio
+            if self._pruning_method != 'maskllm':
+                print(f"[🔧] Calculated target ratio from MACs: {target_ratio:.3f} ({target_ratio*100:.1f}%)")
         elif target_ratio is None:
             raise ValueError("No target_pruning_ratio provided and no MAC targets available to calculate ratio")
 
@@ -566,8 +595,8 @@ class AnalysisAgent:
         print(f"   History entries: {len(history)}")
         print(f"   Dataset: {dataset}")
 
-        baseline_str = f"{baseline_macs:.3f}G" if baseline_macs is not None else "N/A"
-        target_str   = f"{target_macs:.3f}G"   if target_macs   is not None else "N/A"
+        baseline_str = f"{baseline_macs/1e9:.3f}G" if baseline_macs is not None else "N/A"
+        target_str   = f"{target_macs/1e9:.3f}G"   if target_macs   is not None else "N/A"
         print(f"   MACs-first: baseline={baseline_str}, target={target_str}, tol=+{macs_overshoot_tolerance_pct:.1f}%/-{macs_undershoot_tolerance_pct:.1f}%")
 
         print(" macs_overshoot_tolerance_pct value in analysis_agent.py is:",  macs_overshoot_tolerance_pct)
@@ -1378,12 +1407,15 @@ class AnalysisAgent:
         if self._pruning_method == 'maskllm':
             print(f"[🔧] MaskLLM: using full analysis prompt (profiling + master + history)")
             prompt_text = format_analysis_prompt(state)
+            system_msg = (
+                "You are a ViT MaskLLM sparsity expert. "
+                "Pick N:M structured sparsity patterns for BOTH MLP and attention layers to hit a specific MAC target. "
+                "attn_nm is REQUIRED — never set it to null. "
+                "Start with a conservative attn_nm (e.g. 7:8) and reduce mlp_nm aggressively first. "
+                "Output only valid JSON with maskllm_nm_patterns."
+            )
             response = await self.llm.ainvoke([
-                SystemMessage(content=(
-                    "You are a ViT MaskLLM sparsity expert. "
-                    "Pick N:M structured sparsity patterns to hit a specific MAC target. "
-                    "Output only valid JSON with maskllm_nm_patterns."
-                )),
+                SystemMessage(content=system_msg),
                 HumanMessage(content=prompt_text)
             ])
             strategy_dict = parse_llm_json_response(response.content)
@@ -1395,12 +1427,51 @@ class AnalysisAgent:
                     f"Got keys: {list(strategy_dict.keys())}"
                 )
             nm = strategy_dict['maskllm_nm_patterns']
-            attn = nm.get('attn_nm', {})
-            mlp  = nm.get('mlp_nm', {})
+            mlp = nm.get('mlp_nm', {})
+
+            llm_attn_nm = strategy_dict['maskllm_nm_patterns'].get('attn_nm')
+            if not llm_attn_nm:
+                # LLM returned null — fall back to a conservative dense pattern
+                fallback_attn = {'N': 7, 'M': 8}  # 7:8 = 87.5% dense, minimal accuracy impact
+                print(f"[⚠️] LLM returned null for attn_nm — using fallback {fallback_attn}")
+                strategy_dict['maskllm_nm_patterns']['attn_nm'] = fallback_attn
+            attn_nm = strategy_dict['maskllm_nm_patterns'].get('attn_nm')
             print(f"[🤖] MaskLLM N:M selected via full analysis flow:")
-            print(f"   attn_nm: {attn.get('N')}:{attn.get('M')} ({100*attn.get('N',0)/max(attn.get('M',1),1):.1f}% dense)")
+            print(f"   attn_nm: {attn_nm.get('N')}:{attn_nm.get('M')} ({100*attn_nm.get('N',0)/max(attn_nm.get('M',1),1):.1f}% dense)")
             print(f"   mlp_nm:  {mlp.get('N')}:{mlp.get('M')} ({100*mlp.get('N',0)/max(mlp.get('M',1),1):.1f}% dense)")
             print(f"   Estimated MACs: {strategy_dict.get('estimated_macs_g', 'N/A')}G")
+
+            # Deduplication: track (attn_nm, mlp_nm) pairs to avoid repeating experiments
+            history = state.get('history', [])
+            def _hist_key(e):
+                nm = e.get('strategy_used', {}).get('maskllm_nm_patterns', {})
+                mlp_e = nm.get('mlp_nm') or {}
+                attn_e = nm.get('attn_nm') or {}
+                if not mlp_e:
+                    return None
+                return (attn_e.get('N'), attn_e.get('M'), mlp_e['N'], mlp_e['M'])
+            tried_pairs = {k for e in history if (k := _hist_key(e)) is not None}
+            attn_key = (attn_nm.get('N'), attn_nm.get('M')) if attn_nm else (None, None)
+            proposed_key = (*attn_key, mlp.get('N'), mlp.get('M'))
+            if proposed_key in tried_pairs:
+                # Only force a new mlp_nm; keep the same attn_nm
+                tried_mlp = {
+                    (e['strategy_used']['maskllm_nm_patterns']['mlp_nm']['N'],
+                     e['strategy_used']['maskllm_nm_patterns']['mlp_nm']['M'])
+                    for e in history
+                    if e.get('strategy_used', {}).get('maskllm_nm_patterns', {}).get('mlp_nm')
+                    and _hist_key(e) and _hist_key(e)[:2] == attn_key
+                }
+                fallback = self._maskllm_pick_untried_nm({}, mlp, tried_mlp)
+                if fallback:
+                    print(f"[🔄] MaskLLM dedup: pair {proposed_key} already tried → forcing mlp {fallback}")
+                    strategy_dict['maskllm_nm_patterns'] = {
+                        'attn_nm': attn_nm,
+                        'mlp_nm':  {'N': fallback[0], 'M': fallback[1]},
+                    }
+                else:
+                    print(f"[⚠️] MaskLLM dedup: all (attn,mlp) combos tried for this attn_nm, keeping LLM choice")
+
             strategy_dict['importance_criterion'] = 'maskllm'
             return strategy_dict
 
@@ -1605,8 +1676,8 @@ class AnalysisAgent:
         self._analyze_learning_progress(history, target_ratio)
 
         # Safe strings for prompt
-        baseline_str = f"{baseline_macs:.3f}G" if baseline_macs is not None else "N/A"
-        target_str   = f"{target_macs:.3f}G"   if target_macs   is not None else "N/A"
+        baseline_str = f"{baseline_macs/1e9:.3f}G" if baseline_macs is not None else "N/A"
+        target_str   = f"{target_macs/1e9:.3f}G"   if target_macs   is not None else "N/A"
 
         # Dataset-aware accuracy threshold for narrative only
         try:
@@ -2794,8 +2865,8 @@ class AnalysisAgent:
         MACs-first: aim to hit the target MACs within +macs_overshoot_tolerance_pct / -macs_undershoot_tolerance_pct
         """
         # Safe strings for prompt (avoid formatting None with :.3f)
-        baseline_str = f"{baseline_macs:.3f}G" if baseline_macs is not None else "N/A"
-        target_str   = f"{target_macs:.3f}G"   if target_macs   is not None else "N/A"
+        baseline_str = f"{baseline_macs/1e9:.3f}G" if baseline_macs is not None else "N/A"
+        target_str   = f"{target_macs/1e9:.3f}G"   if target_macs   is not None else "N/A"
 
         prompt = f"""You are an expert in ViT pruning for {model_name} on {dataset}.
 

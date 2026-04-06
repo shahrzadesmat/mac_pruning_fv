@@ -42,7 +42,7 @@ from contextlib import suppress
 
 
 MIN_HEAD_DIM = 6       # Minimum 32 for stable attention
-MAX_SAFE_ATTN_PRUNE = 0.9  # Max 85% pruning on attention
+MAX_SAFE_ATTN_PRUNE = 0.85  # Max 85% pruning on attention
 MIN_MLP_DIM = 48       # Can go lower - MLP is less critical
 
 class PruningAgent:
@@ -69,7 +69,10 @@ class PruningAgent:
                 model = get_model(model_name_normalized, num_classes, pretrained=False)
                 # print(f"[🔧] Created ImageNet model: {model_name_normalized} without pretrained weights")
         else:
-            model = get_model(model_name_normalized, num_classes, pretrained=False)
+            try:
+                model = get_model(model_name_normalized, num_classes, pretrained=True)
+            except Exception:
+                model = get_model(model_name_normalized, num_classes, pretrained=False)
             # print(f"[🔧] Created {dataset} model: {model_name_normalized}")
         
         for param in model.parameters():
@@ -2212,7 +2215,7 @@ class PruningAgent:
                 'clip_grad': 2.0,
                 'smoothing': 0.1,
                 'amp': torch.cuda.is_available(),
-                'epochs': 20 if dataset.lower() != 'imagenet' else 5,
+                'epochs': 15 if dataset.lower() != 'imagenet' else 5,
             }
 
             # Setup optimizer and scheduler
@@ -2238,6 +2241,11 @@ class PruningAgent:
             loss_scaler = timm_utils.NativeScaler() if maskllm_config['amp'] else None
 
             print(f"[🎯] MaskLLM training: {num_epochs} epochs, lr={maskllm_config['lr']}")
+
+            # Early stopping: stop if Top-1 doesn't improve by >0.1% for patience epochs
+            _es_patience = 3
+            _es_best_top1 = 0.0
+            _es_no_improve = 0
 
             # Training loop
             for epoch in range(num_epochs):
@@ -2266,6 +2274,16 @@ class PruningAgent:
 
                 lr_scheduler.step(epoch + 1)
 
+                # Early stopping check
+                if eval_metrics['top1'] > _es_best_top1 + 0.1:
+                    _es_best_top1 = eval_metrics['top1']
+                    _es_no_improve = 0
+                else:
+                    _es_no_improve += 1
+                    if _es_no_improve >= _es_patience:
+                        print(f"[⏹️] Early stopping at epoch {epoch}: no improvement for {_es_patience} epochs (best Top-1: {_es_best_top1:.2f}%)")
+                        break
+
             print("[✅] MaskLLM training complete")
 
             # ================================================================
@@ -2293,11 +2311,28 @@ class PruningAgent:
             # Create final model with MaskedLinearFrozen + learned masks
             final_model = timm.create_model(model_name, pretrained=False, num_classes=num_classes)
 
-            # We need to replace with the correct N:M per layer, so use groups + LLM-selected attn_nm/mlp_nm
+            # Derive attn_nm/mlp_nm from nm_configs (ground truth from trained model),
+            # not from the outer attn_nm/mlp_nm which may have drifted or be None.
+            attn_nm_phase3 = None
+            mlp_nm_phase3 = None
+            for layer_name, (N, M) in nm_configs.items():
+                parts = layer_name.split('.')
+                if 'attn' in parts and attn_nm_phase3 is None:
+                    attn_nm_phase3 = {'N': N, 'M': M}
+                elif 'mlp' in parts and mlp_nm_phase3 is None:
+                    mlp_nm_phase3 = {'N': N, 'M': M}
+            print(f"[🎯] Phase 3 N:M from trained model: attn={attn_nm_phase3}, mlp={mlp_nm_phase3}")
+            # Warn if Phase 3 derived values diverge from what the LLM originally selected
+            def _nm_str(nm): return f"{nm['N']}:{nm['M']}" if nm else "None"
+            if _nm_str(attn_nm_phase3) != _nm_str(attn_nm):
+                print(f"[⚠️] attn_nm divergence: LLM selected {_nm_str(attn_nm)}, trained model has {_nm_str(attn_nm_phase3)}")
+            if _nm_str(mlp_nm_phase3) != _nm_str(mlp_nm):
+                print(f"[⚠️] mlp_nm divergence: LLM selected {_nm_str(mlp_nm)}, trained model has {_nm_str(mlp_nm_phase3)}")
+
             _phase3_exclude = [m for attr in ('head', 'head_dist') if hasattr(final_model, attr)
                                for m in [getattr(final_model, attr)] if isinstance(m, nn.Linear)]
             replace_linear_with_(final_model, MaskedLinearFrozen, exclude=_phase3_exclude,
-                                 groups=groups, attn_nm=attn_nm, mlp_nm=mlp_nm)
+                                 groups=groups, attn_nm=attn_nm_phase3, mlp_nm=mlp_nm_phase3)
 
             # Copy weights from MaskLLM-trained model and set learned masks
             maskllm_state = maskllm_model.state_dict()
@@ -2350,21 +2385,64 @@ class PruningAgent:
                 zero_shot_top1 = zero_shot_accuracy
                 print(f"[📊] MaskLLM model accuracy: {zero_shot_accuracy:.2f}%")
 
-            # Compute MACs
-            final_macs, _ = tp.utils.count_ops_and_params(final_model, example_inputs)
+            # Compute MACs analytically for MaskLLM N:M sparsity.
+            # tp.count_ops_and_params is NOT suitable: N:M sparsity never changes matrix
+            # dimensions so any profiler returns the same as the dense baseline. The correct
+            # approach is analytical using the profiled MLP MAC fraction:
+            #   effective_macs = base_macs × (mlp_frac × N/M + (1 - mlp_frac))
+            #
+            # Use mlp_nm_phase3/attn_nm_phase3 — ground truth from the trained model.
+            mlp_mac_frac = state.get('mlp_mac_frac')
+            if mlp_mac_frac is None:
+                # Fallback: estimate from param distribution in the model
+                total_linear_params = sum(
+                    m.in_features * m.out_features
+                    for m in final_model.modules()
+                    if isinstance(m, (nn.Linear, MaskedLinearFrozen))
+                )
+                frozen_params = sum(
+                    m.in_features * m.out_features
+                    for m in final_model.modules()
+                    if isinstance(m, MaskedLinearFrozen)
+                )
+                mlp_mac_frac = frozen_params / total_linear_params if total_linear_params > 0 else 0.0
+                print(f"[⚠️] mlp_mac_frac not in state — estimated from params: {mlp_mac_frac:.3f}")
 
-            # Adjust MACs to account for N:M sparsity in MaskedLinearFrozen layers.
-            # tp.count_ops_and_params treats MaskedLinearFrozen as a dense nn.Linear,
-            # but only N/M of the weights are active, so we scale each layer's MACs by N/M.
-            effective_macs = float(final_macs)
-            for module in final_model.modules():
-                if isinstance(module, MaskedLinearFrozen):
-                    full_layer_macs = module.out_features * module.in_features
-                    sparse_layer_macs = full_layer_macs * (module.N / module.M)
-                    effective_macs += (sparse_layer_macs - full_layer_macs)
-            effective_macs = int(effective_macs)
-            print(f"[📊] MACs (dense): {base_macs/1e9:.3f}G -> {final_macs/1e9:.3f}G")
+            mlp_density = mlp_nm_phase3.get('N', 1) / mlp_nm_phase3.get('M', 8)
+
+            if attn_nm_phase3:
+                attn_mac_frac = state.get('attn_mac_frac')
+                if attn_mac_frac is None:
+                    # Estimate attn_mac_frac by summing params by layer name
+                    attn_params = sum(
+                        m.in_features * m.out_features
+                        for name, m in final_model.named_modules()
+                        if isinstance(m, (nn.Linear, MaskedLinearFrozen))
+                        and 'attn' in name.split('.')
+                    )
+                    total_linear_params = sum(
+                        m.in_features * m.out_features
+                        for m in final_model.modules()
+                        if isinstance(m, (nn.Linear, MaskedLinearFrozen))
+                    )
+                    attn_mac_frac = attn_params / total_linear_params if total_linear_params > 0 else 0.0
+                    print(f"[⚠️] attn_mac_frac not in state — estimated from attn layer params: {attn_mac_frac:.3f}")
+                attn_density = attn_nm_phase3.get('N', 1) / attn_nm_phase3.get('M', 8)
+                effective_macs = int(base_macs * (
+                    mlp_mac_frac  * mlp_density +
+                    attn_mac_frac * attn_density +
+                    (1.0 - mlp_mac_frac - attn_mac_frac)
+                ))
+            else:
+                attn_mac_frac = None
+                attn_density = None
+                effective_macs = int(base_macs * (mlp_mac_frac * mlp_density + (1.0 - mlp_mac_frac)))
+
+            print(f"[📊] MACs (dense baseline): {base_macs/1e9:.3f}G")
             print(f"[📊] MACs (sparse, N:M adjusted): {base_macs/1e9:.3f}G -> {effective_macs/1e9:.3f}G")
+            print(f"[📊]   mlp_frac={mlp_mac_frac:.3f}, mlp_density={mlp_density:.4f} ({mlp_nm_phase3})")
+            if attn_nm_phase3:
+                print(f"[📊]   attn_frac={attn_mac_frac:.3f}, attn_density={attn_density:.4f} ({attn_nm_phase3})")
             final_macs = effective_macs
 
             macs_reduction = float((base_macs - final_macs) / base_macs)
@@ -2457,8 +2535,13 @@ class PruningAgent:
                 'rationale': rationale if rationale else "MaskLLM N:M semi-structured sparsity",
             }
 
-            # Determine if within MAC tolerance (for revision loop compatibility)
-            within_tolerance = abs(macs_error_pct) <= 5.0 if macs_error_pct is not None else False
+            # Determine if within MAC tolerance — use actual state tolerances, not a hardcoded value
+            overshoot_tol = float(state.get('macs_overshoot_tolerance_pct', 1.0))
+            undershoot_tol = float(state.get('macs_undershoot_tolerance_pct', 5.0))
+            within_tolerance = (
+                (-undershoot_tol <= macs_error_pct <= overshoot_tol)
+                if macs_error_pct is not None else False
+            )
 
             history_entry = {
                 'revision': current_revision,
@@ -2474,6 +2557,7 @@ class PruningAgent:
                 'dataset': dataset,
                 'strategy_used': strategy_used,
                 'qkv_multiplier': float(groups['attention_blocks'].pruning_ratio),
+                'pruned_model_checkpoint': checkpoint_path,
             }
 
             if dataset.lower() == 'imagenet':
@@ -2481,9 +2565,14 @@ class PruningAgent:
                     'zero_shot_top1_accuracy': float(zero_shot_top1),
                     'zero_shot_top5_accuracy': float(zero_shot_top5),
                     'zero_shot_accuracy': float(zero_shot_top1),
+                    # Placeholder so eval_agent can find and update this entry
+                    'fine_tuned_top1_accuracy': None,
+                    'fine_tuned_top5_accuracy': None,
                 })
             else:
                 history_entry['zero_shot_accuracy'] = float(zero_shot_accuracy)
+                # Placeholder so eval_agent can find and update this entry
+                history_entry['fine_tuned_accuracy'] = None
 
             state['history'] = state.get('history', [])
             state['history'].append(history_entry)

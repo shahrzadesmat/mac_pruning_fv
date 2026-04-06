@@ -82,13 +82,23 @@ class ProfilingAgent:
             # Calculate efficiency safely (baseline_macs is already safe)
             mac_efficiency = (achieved_macs / baseline_macs_for_calc) * 100 if baseline_macs_for_calc > 0 else 0
             
-            # Get accuracy based on dataset
+            # Get accuracy based on dataset.
+            # For MaskLLM, accuracy lives in pruning_results (not evaluation_results)
+            # until the fine-tuning agent runs, so check both.
+            _eval = state.get('evaluation_results', {})
+            _pruning = state.get('pruning_results', {})
             if dataset.lower() == 'imagenet':
-                accuracy = state.get('evaluation_results', {}).get('fine_tuned_top1_accuracy', 
-                        state.get('evaluation_results', {}).get('zero_shot_top1_accuracy', 0))
+                accuracy = (_eval.get('fine_tuned_top1_accuracy')
+                         or _eval.get('zero_shot_top1_accuracy')
+                         or _pruning.get('zero_shot_top1_accuracy')
+                         or _pruning.get('zero_shot_accuracy')
+                         or 0)
                 accuracy_type = "Top-1"
             else:
-                accuracy = state.get('evaluation_results', {}).get('accuracy', 0)
+                accuracy = (_eval.get('accuracy')
+                         or _eval.get('fine_tuned_accuracy')
+                         or _pruning.get('zero_shot_accuracy')
+                         or 0)
                 accuracy_type = "Accuracy"
 
             subsequent_info = f"""
@@ -101,7 +111,34 @@ class ProfilingAgent:
             Focus: Optimize MAC allocation for {target_macs/1e9:.3f}G target
             """
 
+            # For MaskLLM, append N:M pattern history so the profiling LLM can give
+            # directional advice (e.g. "go sparser" if previous attempts were too dense).
+            if state.get('pruning_method') == 'maskllm':
+                history = state.get('history', [])
+                if history:
+                    nm_lines = ["Previous MaskLLM N:M attempts (most recent last):"]
+                    for entry in history:
+                        nm = entry.get('strategy_used', {}).get('maskllm_nm_patterns', {})
+                        mlp = nm.get('mlp_nm', {})
+                        achieved = entry.get('achieved_macs')
+                        target_h  = entry.get('target_macs')
+                        if mlp and achieved and target_h:
+                            err = (float(achieved) - float(target_h)) / float(target_h) * 100
+                            if err > macs_overshoot_tolerance_pct:
+                                direction = "TOO DENSE — need sparser mlp_nm"
+                            elif err < -macs_undershoot_tolerance_pct:
+                                direction = "TOO SPARSE — need denser mlp_nm"
+                            else:
+                                direction = "WITHIN TOLERANCE"
+                            nm_lines.append(
+                                f"  Rev {entry.get('revision', '?')}: "
+                                f"mlp={mlp.get('N')}:{mlp.get('M')} → "
+                                f"{float(achieved)/1e9:.3f}G ({err:+.1f}%) [{direction}]"
+                            )
+                    subsequent_info += "\n" + "\n".join(nm_lines)
+
         # Create a sample model to analyze its architecture or use the provided model
+        profile_results = None  # initialised here so the except block can detect if it was built
         try:
             device = torch.device("cpu")  # Use CPU for profiling
             
@@ -116,8 +153,11 @@ class ProfilingAgent:
                     model = get_model(model_name, num_classes, pretrained=True)
                     # print(f"[🔍] Created ImageNet model with pretrained weights and {num_classes} classes")
                 else:
-                    # CIFAR-10 or other datasets - no pretrained weights needed
-                    model = get_model(model_name, num_classes, pretrained=False)
+                    # Use pretrained ImageNet backbone even for non-ImageNet datasets
+                    try:
+                        model = get_model(model_name, num_classes, pretrained=True)
+                    except Exception:
+                        model = get_model(model_name, num_classes, pretrained=False)
                     # print(f"[🔍] Created {dataset} model with {num_classes} classes")
                 
             # Dataset-aware input size
@@ -167,6 +207,37 @@ class ProfilingAgent:
 
             layer_macs, _ = tp.utils.count_ops_and_params(model, example_inputs)
             print(f"[✅] torch_pruning measured: {layer_macs/1e9:.3f} GMACs")
+
+            # Compute per-type MAC fractions for ViT/DeiT models.
+            # Used by MaskLLM analysis to replace hardcoded attn/mlp split estimates.
+            attn_mac_frac = None
+            mlp_mac_frac  = None
+            if hasattr(model, 'blocks') and hasattr(model, 'patch_embed'):
+                try:
+                    patch_size = model.patch_embed.patch_size
+                    if isinstance(patch_size, (tuple, list)):
+                        patch_size = patch_size[0]
+                    num_patches = (input_size // patch_size) ** 2
+                    num_tokens  = num_patches + getattr(model, 'num_prefix_tokens', 1)
+
+                    attn_linear_macs = 0
+                    mlp_linear_macs  = 0
+                    for block in model.blocks:
+                        for name, module in block.named_modules():
+                            if isinstance(module, nn.Linear):
+                                mac = num_tokens * module.in_features * module.out_features
+                                parts = name.split('.')
+                                if 'attn' in parts:
+                                    attn_linear_macs += mac
+                                elif 'mlp' in parts:
+                                    mlp_linear_macs += mac
+
+                    attn_mac_frac = round(attn_linear_macs / layer_macs, 3)
+                    mlp_mac_frac  = round(mlp_linear_macs  / layer_macs, 3)
+                    print(f"[📊] ViT MAC split: attn={attn_mac_frac:.1%}, mlp={mlp_mac_frac:.1%}, "
+                          f"other={1-attn_mac_frac-mlp_mac_frac:.1%}")
+                except Exception as split_err:
+                    print(f"[⚠️] MAC split computation failed: {split_err}, using defaults")
 
             # Build simplified layer_info for compatibility
             layer_info = [{
@@ -219,30 +290,58 @@ class ProfilingAgent:
                 else:
                     sensitivity.append(f"Can be more aggressive with MAC reduction for {target_macs_for_calc/1e9:.3f}G target due to simpler dataset")
                 
-            elif "vit" in model_name.lower() or "swin" in model_name.lower():
-                dependencies.extend([
-                    "Attention mechanisms create complex MAC dependencies",
-                    "Multi-head attention requires consistent head dimensions for MAC efficiency"
-                ])
-                constraints.extend([
-                    "Head dimensions must be maintained for attention MAC calculations",
-                    "Embedding dimensions must be consistent for MAC efficiency across layers"
-                ])
-                sensitivity.extend([
-                    "Head pruning generally preferred over full layer pruning for MAC optimization",
-                    f"MLP and QKV blocks are primary targets for {target_macs_for_calc/1e9:.3f}G MAC reduction"
-                ])
-                
-                # Dataset-specific ViT considerations  
-                if dataset.lower() == 'imagenet':
-                    sensitivity.extend([
-                        f"Pretrained attention patterns valuable for ImageNet at {target_macs_for_calc/1e9:.3f}G MAC target",
-                        "Patch embedding layer critical for image tokenization and MAC efficiency"
+            elif "vit" in model_name.lower() or "swin" in model_name.lower() or "deit" in model_name.lower():
+                if state.get('pruning_method') == 'maskllm':
+                    _mlp_frac  = mlp_mac_frac  if mlp_mac_frac  is not None else 0.60
+                    _attn_frac = attn_mac_frac if attn_mac_frac is not None else 0.28
+                    dependencies.append(
+                        "N:M sparsity is applied independently per layer — no structural dependencies between layers"
+                    )
+                    constraints.extend([
+                        "All layer dimensions are preserved — only weights are zeroed in N:M patterns",
+                        "Both MLP (fc1/fc2) and attention (q/k/v/proj) layers are pruning targets via N:M sparsity",
                     ])
-                    constraints.append("Position embeddings should be preserved for MAC-efficient processing")
+                    sensitivity.extend([
+                        "Both MLP and attention layers contribute to MAC reduction",
+                        f"MLP layers account for ~{_mlp_frac:.0%} of total MACs; attention layers ~{_attn_frac:.0%}",
+                        "Denser N:M (higher N/M ratio) → more MACs remaining; sparser → fewer MACs",
+                        f"To hit {target_macs_for_calc/1e9:.3f}G, pick attn_nm and mlp_nm such that: "
+                        f"baseline × (mlp_density × {_mlp_frac:.2f} + attn_density × {_attn_frac:.2f} + {1-_mlp_frac-_attn_frac:.2f}) ≈ target",
+                    ])
+                    if dataset.lower() == 'imagenet':
+                        sensitivity.append(
+                            "ImageNet accuracy is sensitive to over-pruning — prefer denser N:M patterns"
+                        )
+                    else:
+                        # CIFAR-10 specific MaskLLM guidance
+                        sensitivity.extend([
+                            "CIFAR-10 tolerates aggressive sparsity — sparser N:M patterns are acceptable for both MLP and attention",
+                            "Fine-tuning on CIFAR-10 recovers accuracy well even after aggressive N:M pruning",
+                        ])
                 else:
-                    sensitivity.append(f"Attention layers can handle more aggressive MAC reduction for {target_macs_for_calc/1e9:.3f}G target on simpler datasets")
-                
+                    dependencies.extend([
+                        "Attention mechanisms create complex MAC dependencies",
+                        "Multi-head attention requires consistent head dimensions for MAC efficiency"
+                    ])
+                    constraints.extend([
+                        "Head dimensions must be maintained for attention MAC calculations",
+                        "Embedding dimensions must be consistent for MAC efficiency across layers"
+                    ])
+                    sensitivity.extend([
+                        "Head pruning generally preferred over full layer pruning for MAC optimization",
+                        f"MLP and QKV blocks are primary targets for {target_macs_for_calc/1e9:.3f}G MAC reduction"
+                    ])
+
+                    # Dataset-specific ViT considerations
+                    if dataset.lower() == 'imagenet':
+                        sensitivity.extend([
+                            f"Pretrained attention patterns valuable for ImageNet at {target_macs_for_calc/1e9:.3f}G MAC target",
+                            "Patch embedding layer critical for image tokenization and MAC efficiency"
+                        ])
+                        constraints.append("Position embeddings should be preserved for MAC-efficient processing")
+                    else:
+                        sensitivity.append(f"Attention layers can handle more aggressive MAC reduction for {target_macs_for_calc/1e9:.3f}G target on simpler datasets")
+
                 if "swin" in model_name.lower():
                     constraints.append("Window partition mechanisms must be preserved for MAC efficiency")
                     
@@ -358,7 +457,11 @@ class ProfilingAgent:
             print(f"[✅] MAC Target: {target_macs_for_calc/1e9:.3f}G ({eff_str} efficiency)")
 
             
-            return {'profile_results': profile_results}
+            result = {'profile_results': profile_results}
+            if attn_mac_frac is not None:
+                result['attn_mac_frac'] = attn_mac_frac
+                result['mlp_mac_frac']  = mlp_mac_frac
+            return result
             
         except Exception as e:
             print(f"Error in MAC-aware profiling: {str(e)}")
@@ -398,35 +501,44 @@ class ProfilingAgent:
                     HumanMessage(content=state['query'])
                 ]
                 response = await self.llm.ainvoke(messages)
-                
-                # Return minimal profile with LLM analysis
-                fallback_profile = {
+
+                # Reuse already-computed profile_results if available (preserves measured
+                # baseline_macs). This matters when the first LLM call timed out after
+                # MAC measurement already succeeded.
+                if profile_results is not None:
+                    profile_results["analysis"] = response.content
+                    profile_results["error_fallback"] = True
+                    return {'profile_results': profile_results}
+
+                safe_bm = baseline_macs_for_calc if (baseline_macs_for_calc is not None and not __import__('math').isnan(baseline_macs_for_calc)) else baseline_macs
+                return {'profile_results': {
                     "analysis": response.content,
                     "dataset": dataset,
                     "num_classes": num_classes,
                     "input_size": input_size,
                     "model_complexity": "high" if dataset.lower() == 'imagenet' else "moderate",
-                    "baseline_macs": baseline_macs,
+                    "baseline_macs": safe_bm,
                     "target_macs": target_macs,
                     "macs_overshoot_tolerance_pct": macs_overshoot_tolerance_pct,
                     "macs_undershoot_tolerance_pct": macs_undershoot_tolerance_pct,
                     "error_fallback": True
-                }
-                
-                return {'profile_results': fallback_profile}
+                }}
 
-                
             except Exception as fallback_error:
                 print(f"[❌] Fallback MAC profiling also failed: {fallback_error}")
-                # Ultimate fallback - ensure all values are not None
-                safe_target_macs = target_macs/1e9 if target_macs is not None else 5.0
+                safe_target_macs = target_macs / 1e9 if target_macs is not None else 5.0
+                safe_bm = baseline_macs_for_calc if (baseline_macs_for_calc is not None and not __import__('math').isnan(baseline_macs_for_calc)) else baseline_macs
+                if profile_results is not None:
+                    profile_results["analysis"] = f"Basic MAC profile for {model_name} on {dataset}. Target: {safe_target_macs:.3f}G. Error during detailed analysis."
+                    profile_results["critical_failure"] = True
+                    return {'profile_results': profile_results}
                 return {
                     'profile_results': {
                         'analysis': f"Basic MAC profile for {model_name} on {dataset}. Target: {safe_target_macs:.3f}G. Error during detailed analysis.",
                         'dataset': dataset,
                         'num_classes': num_classes,
                         'input_size': input_size,
-                        'baseline_macs': baseline_macs,
+                        'baseline_macs': safe_bm,
                         'target_macs': target_macs,
                         'critical_failure': True
                     }

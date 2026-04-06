@@ -483,7 +483,7 @@ def create_pruning_workflow():
             print(f"   Total candidates evaluated: {len(candidate_models)}")
             print(f"   Best model: Revision {best_revision}")
             print(f"   Best {accuracy_type}: {best_accuracy:.2f}%")
-            print(f"   MAC achievement: {best_achieved_macs:.3f}G (target: {best_target_macs:.3f}G, error: {best_mac_error:+.1f}%)")
+            print(f"   MAC achievement: {best_achieved_macs/1e9:.3f}G (target: {best_target_macs/1e9:.3f}G, error: {best_mac_error:+.1f}%)")
             
             # Store results for final model saving
             state['final_best_model'] = best_model
@@ -497,9 +497,14 @@ def create_pruning_workflow():
         
         # ✅ CRITICAL: Handle state modifications properly
         if stop_reason == "initialize_phase2":
-            state['extended_search_remaining'] = 20
-            GLOBAL_STATE['extended_search_remaining'] = 20  # Also update global state
-            print(f"[🔧] Initialized extended_search_remaining = 20")
+            # MaskLLM trials are very expensive (~2-3h each); 2 extra trials is sufficient
+            # since the N:M pattern space is discrete and history prevents repeats.
+            # Structural pruning keeps the original 20.
+            phase2_trials = 2 if state.get('pruning_method') == 'maskllm' else 20
+            state['extended_search_remaining'] = phase2_trials
+            GLOBAL_STATE['extended_search_remaining'] = phase2_trials
+            print(f"[🔧] Initialized extended_search_remaining = {phase2_trials} "
+                  f"({'maskllm' if state.get('pruning_method') == 'maskllm' else 'structural'})")
             continue_optimization = True
             stop_reason = None
         elif stop_reason == "continue_phase2":
@@ -619,7 +624,7 @@ def create_pruning_workflow():
                 mac_within_tolerance = (-macs_undershoot_tolerance_pct <= mac_error_pct <= macs_overshoot_tolerance_pct)
                 
                 if mac_within_tolerance:
-                    print(f"[✅] Achieved {achieved_macs/1e9:.3f}G MACs, meets target {target_mac:.3f}G (error: {mac_error_pct:+.1f}%)")
+                    print(f"[✅] Achieved {achieved_macs/1e9:.3f}G MACs, meets target {target_mac/1e9:.3f}G (error: {mac_error_pct:+.1f}%)")
                     # Mark as candidate model
                     result['is_candidate_model'] = True
                     state['is_candidate_model'] = True
@@ -692,8 +697,11 @@ def create_pruning_workflow():
                     entry['zero_shot_accuracy'] = pruning_res.get('zero_shot_accuracy', 0)
                     entry['fine_tuned_accuracy'] = None
                 
-                result.setdefault('history', []).append(entry)
-                GLOBAL_STATE['history'] = result['history']
+                # MaskLLM already appended a complete history entry (with maskllm_nm_patterns)
+                # inside _execute_maskllm_pruinng(). Skip the duplicate here.
+                if state.get('pruning_method') != 'maskllm':
+                    result.setdefault('history', []).append(entry)
+                GLOBAL_STATE['history'] = result.get('history', [])
 
                 # Commit and return
                 GLOBAL_STATE.update(result)
@@ -1096,7 +1104,6 @@ async def run_pruning_workflow(model_name: str, query: str, dataset: str = "cifa
             if 'max_revisions' in state_mods:
                 max_revisions = state_mods['max_revisions']
                 print(f"[🔧] Set maximum revisions to {max_revisions}")
-
             # Extract and validate MAC targets from state_mods
             target_macs = None
             baseline_macs = None

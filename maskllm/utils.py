@@ -92,7 +92,7 @@ def replace_linear_with_(model, new_class, exclude=[], groups=None,
           60.0%     3:5   >= 0.586
           57.1%     4:7   >= 0.564
           55.6%     5:9   >= 0.528
-          50.0%     4:8   >= 0.472
+          50.0%     2:4   >= 0.472
           44.4%     4:9   >= 0.437
           42.9%     3:7   >= 0.414
           40.0%     2:5   >= 0.388
@@ -136,7 +136,7 @@ def replace_linear_with_(model, new_class, exclude=[], groups=None,
         elif density >= 0.528:
             return {'N': 5, 'M': 9}   # 55.6% dense
         elif density >= 0.472:
-            return {'N': 4, 'M': 8}   # 50.0% dense
+            return {'N': 2, 'M': 4}   # 50.0% dense
         elif density >= 0.437:
             return {'N': 4, 'M': 9}   # 44.4% dense
         elif density >= 0.414:

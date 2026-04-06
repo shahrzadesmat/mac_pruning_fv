@@ -302,11 +302,15 @@ class FineTuningAgent:
             # Get user-specified number of epochs
             params = self._get_dataset_specific_params(dataset, is_vit_model)
             num_epochs = params['num_epochs']  # Respect user setting (you set this to 1)
-            
+
             # Use dataset-specific learning rate from params
+            # MaskLLM already converges the model well — use a lower LR to avoid disrupting it
             base_lr = params['learning_rate']
-            
-            print(f"[🔧] Using LR {base_lr} for {achieved_ratio:.1%} pruned model")
+            pruning_method = state.get('pruning_method', 'structural')
+            if pruning_method == 'maskllm':
+                base_lr = base_lr * 0.1
+
+            print(f"[🔧] Using LR {base_lr} for {achieved_ratio:.1%} pruned model ({pruning_method})")
             # print(f"[⚙️] User set epochs: {num_epochs}")
             
             # FIX: Setup data loaders EARLY
@@ -353,8 +357,8 @@ class FineTuningAgent:
             # Loss with light label smoothing
             criterion = nn.CrossEntropyLoss(label_smoothing=0.05).to(device)
             
-            # Track best model
-            best_val_acc = 0.0
+            # Track best model - initialize to zero-shot so fine-tuning must beat it
+            best_val_acc = zero_shot
             best_model_state = None
             patience = 5
             patience_counter = 0

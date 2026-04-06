@@ -121,7 +121,7 @@ async def save_final_best_model(state):
 
     print(
         f"\n[🏆] Selected revision {revision} "
-        f"({achieved_macs:.3f}G MAC achieved, {mac_efficiency:.1f}% efficiency) "
+        f"({achieved_macs/1e9:.3f}G MAC achieved, {mac_efficiency:.1f}% efficiency) "
         f"with fine‑tuned {acc_label}: {best_ft_acc:.2f}%"
     )
 
@@ -173,7 +173,7 @@ async def save_final_best_model(state):
     # ──────────────────────────────────────────────────────────────────────────
     base_filename = (
         f"final_pruned_{model_name}_{dataset}_rev{revision}"
-        f"_macs{achieved_macs:.3f}G"
+        f"_macs{achieved_macs/1e9:.3f}G"
     )
     
     # 4-A: Save state dict (weights only) - RECOMMENDED for portability

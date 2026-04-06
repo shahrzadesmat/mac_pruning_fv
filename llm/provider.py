@@ -6,7 +6,7 @@ def get_llm():
     """Returns a configured LLM instance using OpenAI o3 through OpenRouter"""
     return DeepSeekLLM(
         provider="openrouter",
-        model="minimax/minimax-m2.1",  # o3 through OpenRouter
+        model="qwen/qwen-2.5-7b-instruct",  # o3 through OpenRouter
         temperature=0
     )
 

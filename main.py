@@ -82,17 +82,29 @@ if __name__ == "__main__":
                    help='Directory to save intermediate checkpoints')
     parser.add_argument('--pruning_method', type=str, default='structural', choices=['structural', 'unstructured', 'maskllm'],
                         help='Pruning method to use')
+    parser.add_argument('--seed', type=int, default=42,
+                        help='Random seed for reproducibility')
     # Add WandB arguments
     parser = add_wandb_args(parser)
 
     args = parser.parse_args()
+
+    # Set global random seed
+    import numpy as np
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    print(f"[🌱] Random seed set to {args.seed}")
 
     # Initialize WandB
     if args.wandb_name is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         mac_tag = (f"{args.macs_target_g:.2f}G" if args.macs_target_g is not None
            else (f"{args.macs_target_ratio*100:.0f}pctMAC" if args.macs_target_ratio is not None else "MAC"))
-        args.wandb_name = f"{args.model}_{args.dataset}_macs{mac_tag}_{timestamp}"
+        args.wandb_name = f"{args.model}_{args.dataset}_macs{mac_tag}_seed{args.seed}_{timestamp}"
 
     # print(f"[WandB] Initializing WandB run for project '{args.wandb_project}' with name '{args.wandb_name}'")
 
@@ -100,6 +112,7 @@ if __name__ == "__main__":
         # Model and dataset info
         'model_name': args.model,
         'dataset': args.dataset,
+        'seed': args.seed,
         'macs_target_g': args.macs_target_g,
         'macs_target_ratio': args.macs_target_ratio,
         'data_path': args.data_path,
@@ -223,6 +236,7 @@ if __name__ == "__main__":
         'max_revisions': args.max_revisions,
         'accuracy_threshold': args.accuracy_threshold,
         'pruning_method': args.pruning_method,
+        'seed': args.seed,
         **macs_config  # ✅ ADD: Include MACs configuration
     }
 
@@ -541,11 +555,11 @@ if __name__ == "__main__":
                 achieved_macs = results.get("achieved_macs") or (baseline_macs * (1.0 - achieved_ratio) if (baseline_macs and achieved_ratio is not None) else None)
 
                 if baseline_macs:
-                    print(f"Baseline MACs: {float(baseline_macs/1e9)/1e9:.3f}G")
+                    print(f"Baseline MACs: {float(baseline_macs)/1e9:.3f}G")
                 if target_macs:
-                    print(f"Target MACs: {float(target_macs/1e9)/1e9:.3f}G")
+                    print(f"Target MACs: {float(target_macs)/1e9:.3f}G")
                 if achieved_macs:
-                    print(f"Achieved MACs: {float(achieved_macs/1e9)/1e9:.3f}G")
+                    print(f"Achieved MACs: {float(achieved_macs)/1e9:.3f}G")
 
                 print(f"MACs reduction: {macs_reduction*100:.2f}%")
 
@@ -564,7 +578,7 @@ if __name__ == "__main__":
                         print(f"Fine-tuned Top-5 Accuracy: {ft_top5:.2f}%")
 
 
-                print(f"Success criteria met: {eval_results.get('success', False)}")
+                print(f"Success criteria met: {model_success}")
                 print(f"Total iterations: {results.get('revision_number', 0)}")
                 print("="*70)
 
@@ -640,12 +654,14 @@ if __name__ == "__main__":
             if is_systematic_failure:
                 print(f"🚨 CRITICAL: Systematic failure detected - all models failed catastrophically")
                 print(f"🎯 SOLUTION: Reduce pruning ratio to 10-20% and retry")
-            elif eval_results.get('success', False):
+            elif model_success:
                 print(f"✅ The {args.dataset} pruning process was successful! The model meets the MACs budget and accuracy requirements.")
             else:
-                if eval_results.get('passed_target_macs', eval_results.get('passed_target_ratio', False)):
+                passes_mac = _entry_achieved_macs_within_tolerance(achieved_macs, target_macs, macs_overshoot_tol, macs_undershoot_tol)
+                passes_acc = ft_acc is not None and ft_acc >= accuracy_threshold
+                if passes_mac and not passes_acc:
                     print(f"⚠️ The {args.dataset} pruning achieved the MACs budget but did not meet the accuracy threshold.")
-                elif eval_results.get('passed_accuracy_threshold', False):
+                elif passes_acc and not passes_mac:
                     print(f"⚠️ The {args.dataset} model maintains good accuracy but did not achieve the MACs budget.")
                 else:
                     print(f"❌ The {args.dataset} pruning process did not meet either the ratio or accuracy requirements.")

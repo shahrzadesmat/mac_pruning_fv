@@ -328,7 +328,9 @@ Always consider MAC efficiency vs accuracy trade-offs from historical attempts
 
 def get_cnn_analysis_content(dataset, target_macs, baseline_macs, macs_overshoot_tolerance_pct, macs_undershoot_tolerance_pct, model_name):
     """Enhanced MAC-based CNN analysis with ConvNext support"""
-    
+
+    _num_classes = 1000
+
     # Calculate MAC efficiency and reduction metrics
     mac_efficiency_target = (target_macs / baseline_macs) * 100
     mac_reduction_needed = ((baseline_macs - target_macs) / baseline_macs) * 100
@@ -377,12 +379,12 @@ ConvNext CIFAR-10 MAC Guidance:
             safety_limits = f"""
 🚨 CNN MAC SAFETY LIMITS FOR IMAGENET 🚨
 ========================================
-- Conservative MAC reduction required for 1000-class complexity
+- Conservative MAC reduction required for {_num_classes}-class complexity
 - Target MAC budget: {target_macs:.3f}G (efficiency: {mac_efficiency_target:.1f}% of baseline)
 - Tolerance: +{macs_overshoot_tolerance_pct:.1f}%/-{macs_undershoot_tolerance_pct:.1f}% ({tolerance_range})
 - Preserve residual connections and skip connections (MAC dependencies)
 - First conv layer: NEVER prune (critical for MAC-efficient feature extraction)
-- Final classifier: NEVER prune (1000 classes need full MAC capacity)
+- Final classifier: NEVER prune ({_num_classes} classes need full MAC capacity)
 - Bottleneck layers: Extra conservative (MAC-critical architectural points)
 - Focus on achieving target MAC budget with minimal accuracy loss
 """
@@ -514,32 +516,33 @@ def get_vit_analysis_content(dataset, target_macs, baseline_macs, macs_overshoot
     # weights in N:M patterns, so there is no channel-count rounding required.
     pruning_method = state.get('pruning_method', 'structural') if state else 'structural'
     if pruning_method == 'maskllm':
-        attn_frac = 0.35
-        mlp_frac  = 0.60
-        lower_g = target_macs * (1 - macs_undershoot_tolerance_pct / 100)
-        upper_g = target_macs * (1 + macs_overshoot_tolerance_pct / 100)
+        attn_frac = state.get('attn_mac_frac', 0.35) if state else 0.35
+        mlp_frac  = state.get('mlp_mac_frac',  0.60) if state else 0.60
+        _target_g   = target_macs / 1e9
+        _baseline_g = baseline_macs / 1e9
+        lower_g = _target_g * (1 - macs_undershoot_tolerance_pct / 100)
+        upper_g = _target_g * (1 + macs_overshoot_tolerance_pct / 100)
 
         guidance = f"""
 MaskLLM ViT N:M Sparsity Guidance ({dataset.upper()}):
-- Pick N:M sparsity patterns for attention and MLP blocks to hit the MAC target.
-- Attention layers (~{attn_frac*100:.0f}% of MACs) should be pruned conservatively — critical for accuracy.
-- MLP layers (~{mlp_frac*100:.0f}% of MACs) can be pruned more aggressively.
-- Use the profiling information above to understand which layers are most sensitive.
-- Use the history below to avoid previously-tried combinations.
-- MAC formula: achieved ≈ baseline × (attn_density×{attn_frac:.2f} + mlp_density×{mlp_frac:.2f} + 0.05)
+- Both MLP and attention layers MUST be pruned via N:M weight sparsity — attn_nm is REQUIRED, never null.
+- MLP layers (~{mlp_frac*100:.0f}% of MACs) and attention layers (~{attn_frac*100:.0f}% of MACs) are both pruning targets.
+- STRATEGY: Reduce mlp_nm aggressively first. Keep attn_nm conservative (e.g. 7:8 or 6:7) unless more attn reduction is needed.
+- Use the history below to avoid previously-tried (attn_nm, mlp_nm) combinations.
+- MAC formula: achieved ≈ baseline × (mlp_density×{mlp_frac:.2f} + attn_density×{attn_frac:.2f} + {1-mlp_frac-attn_frac:.2f})
 """
 
         safety_limits = f"""
 MASKLLM N:M SPARSITY CONSTRAINTS ({dataset.upper()}):
 =======================================================
-- Baseline MACs : {baseline_macs:.3f}G
-- Target MACs   : {target_macs:.3f}G  (tolerance: -{macs_undershoot_tolerance_pct:.1f}% to +{macs_overshoot_tolerance_pct:.1f}%)
+- Baseline MACs : {_baseline_g:.3f}G
+- Target MACs   : {_target_g:.3f}G  (tolerance: -{macs_undershoot_tolerance_pct:.1f}% to +{macs_overshoot_tolerance_pct:.1f}%)
 - Acceptable range: {lower_g:.3f}G – {upper_g:.3f}G
 
 AVAILABLE N:M OPTIONS (27 levels, dense → sparse):
   8:9(88.9%) 7:8(87.5%) 6:7(85.7%) 5:6(83.3%) 4:5(80.0%)
   7:9(77.8%) 6:8(75.0%) 5:7(71.4%) 4:6(66.7%) 5:8(62.5%)
-  3:5(60.0%) 4:7(57.1%) 5:9(55.6%) 4:8(50.0%) 4:9(44.4%)
+  3:5(60.0%) 4:7(57.1%) 5:9(55.6%) 2:4(50.0%) 4:9(44.4%)
   3:7(42.9%) 2:5(40.0%) 3:8(37.5%) 2:6(33.3%) 2:7(28.6%)
   2:8(25.0%) 2:9(22.2%) 1:5(20.0%) 1:6(16.7%) 1:7(14.3%)
   1:8(12.5%) 1:9(11.1%)
@@ -549,18 +552,30 @@ AVAILABLE N:M OPTIONS (27 levels, dense → sparse):
 N:M SPARSITY PARAMETER DEFINITIONS:
 
 - N:M means keep N weights out of every M consecutive weights (density = N/M).
-- attn_nm : N:M pattern for all attention linear layers (qkv + proj).
-- mlp_nm  : N:M pattern for all MLP linear layers (fc1 + fc2).
+- attn_nm : N:M pattern for attention linear layers (q/k/v/proj). REQUIRED — must never be null.
+- mlp_nm  : N:M pattern for all MLP linear layers (fc1 + fc2). REQUIRED.
 - Higher density (N/M → 1) = more MACs remaining = less pruning.
 - Lower  density (N/M → 0) = fewer MACs remaining = more pruning.
 
-REASONING STEPS:
-Step 1: target_density = {target_macs:.3f} / {baseline_macs:.3f} = {target_macs/baseline_macs:.3f}
-Step 2: Choose attn_density conservatively (e.g. 4:8=0.50 or 5:8=0.625).
-Step 3: Solve mlp_density = (target_density - attn_density×{attn_frac:.2f} - 0.05) / {mlp_frac:.2f}
-Step 4: Find the N:M entry in the table closest to that mlp_density.
-Step 5: Compute estimated_MACs = {baseline_macs:.3f} × (attn_density×{attn_frac:.2f} + mlp_density×{mlp_frac:.2f} + 0.05).
-Step 6: Verify result is within [{lower_g:.3f}G, {upper_g:.3f}G]. Adjust if needed.
+PRUNING STRATEGY — MLP FIRST, ATTENTION CONSERVATIVE:
+- Always reduce mlp_nm aggressively before reducing attn_nm.
+- Keep attn_nm conservative (dense, e.g. 7:8 or 6:7) unless MLP alone cannot reach the target.
+- MLP density below ~40% (e.g. 2:5 or sparser) risks significant accuracy degradation.
+  If mlp_nm would need to go below 40%, compensate by also reducing attn_nm.
+- If history shows previous attempts were TOO DENSE: reduce mlp_nm first (go sparser by 1-2 table steps).
+  Only reduce attn_nm by 1-2 table steps if mlp_nm cannot safely go lower.
+
+REASONING STEPS (with attention pruning):
+Step 1: target_density = {_target_g:.3f} / {_baseline_g:.3f} = {_target_g/_baseline_g:.3f}
+Step 2: Start with a conservative attn_density (e.g. 0.875 = 7:8). Solve for mlp_density:
+        mlp_density = (target_density - attn_density×{attn_frac:.2f} - {1-mlp_frac-attn_frac:.2f}) / {mlp_frac:.2f}
+Step 3: If mlp_density >= 0.40, use it. Pick the closest N:M from the table for mlp_nm.
+        If mlp_density < 0.40, set mlp_density = 0.40 and solve for the required attn_density:
+        attn_density = (target_density - 0.40×{mlp_frac:.2f} - {1-mlp_frac-attn_frac:.2f}) / {attn_frac:.2f}
+Step 4: Check history — if the (attn_nm, mlp_nm) pair was already tried, pick the next sparser mlp_nm.
+Step 5: Find valid N:M entries from the table for both attn_nm and mlp_nm.
+Step 6: Compute estimated_MACs = {_baseline_g:.3f} × (mlp_density×{mlp_frac:.2f} + attn_density×{attn_frac:.2f} + {1-mlp_frac-attn_frac:.2f}).
+Step 7: Verify result is within [{lower_g:.3f}G, {upper_g:.3f}G]. Adjust if needed.
 """
 
         output_format = f"""
@@ -579,9 +594,15 @@ Output your MaskLLM N:M strategy as JSON (no markdown, no comments):
 
 REQUIREMENTS:
 - Output ONLY the JSON object above — no markdown, no comments
-- maskllm_nm_patterns must have attn_nm and mlp_nm each with integer N and M
+- attn_nm MUST be a valid N:M entry from the table — null is NOT allowed
+- mlp_nm must have integer N and M
+- mlp_nm M MUST be one of: 4, 5, 6, 7, 8, or 9 — NO other values are valid
+- mlp_nm N MUST satisfy 1 ≤ N < M and (N, M) must appear in the AVAILABLE N:M OPTIONS table above
+- attn_nm must also use M ∈ {{4,5,6,7,8,9}} from the table above
+- DO NOT invent N:M values outside the table — only use entries listed above
+- The (attn_nm, mlp_nm) pair MUST NOT match any FORBIDDEN pair listed in the history section above
 - estimated_macs_g must be within [{lower_g:.3f}, {upper_g:.3f}]
-- If tolerance cannot be met exactly, pick the closest option and explain in reasoning
+- If tolerance cannot be met exactly, pick the closest option FROM THE TABLE and explain in reasoning
 """
 
         return {
@@ -750,35 +771,40 @@ def format_vit_history_analysis(history, target_macs, baseline_macs, macs_oversh
     """Enhanced MAC-based history analysis specifically for ViT models"""
 
     if not history:
-        return f"No previous attempts - use conservative MAC allocation baseline approach for {target_macs:.3f}G target."
+        return f"No previous attempts - use conservative MAC allocation baseline approach for {target_macs/1e9:.3f}G target."
 
     # MaskLLM history: show N:M patterns instead of multipliers
     if history[0].get('strategy_used', {}).get('maskllm_nm_patterns'):
         lines = [f"LEARNING FROM {len(history)} PREVIOUS MASKLLM ATTEMPTS:"]
         lines.append("=" * 60)
-        lines.append(f"MAC TARGET: {target_macs:.3f}G (+{macs_overshoot_tolerance_pct:.1f}%/-{macs_undershoot_tolerance_pct:.1f}%) from {baseline_macs:.3f}G baseline")
+        lines.append(f"MAC TARGET: {target_macs/1e9:.3f}G (+{macs_overshoot_tolerance_pct:.1f}%/-{macs_undershoot_tolerance_pct:.1f}%) from {baseline_macs/1e9:.3f}G baseline")
         lines.append("")
+
+        all_too_dense = True
         for i, entry in enumerate(history, 1):
             strategy = entry.get('strategy_used', {})
             nm = strategy.get('maskllm_nm_patterns', {})
-            attn = nm.get('attn_nm', {})
             mlp  = nm.get('mlp_nm', {})
-            attn_str = f"{attn.get('N')}:{attn.get('M')} ({100*attn.get('N',0)/max(attn.get('M',1),1):.0f}%)" if attn else "unknown"
-            mlp_str  = f"{mlp.get('N')}:{mlp.get('M')} ({100*mlp.get('N',0)/max(mlp.get('M',1),1):.0f}%)"  if mlp  else "unknown"
+            attn = nm.get('attn_nm')
+            mlp_str  = f"{mlp.get('N')}:{mlp.get('M')} ({100*mlp.get('N',0)/max(mlp.get('M',1),1):.0f}%)" if mlp else "unknown"
+            attn_str = f"{attn.get('N')}:{attn.get('M')} ({100*attn.get('N',0)/max(attn.get('M',1),1):.0f}%)" if attn else "null"
             achieved_macs = entry.get('achieved_macs') or entry.get('final_macs')
             if achieved_macs and target_macs:
                 err = (float(achieved_macs) - float(target_macs)) / float(target_macs) * 100
                 if -macs_undershoot_tolerance_pct <= err <= macs_overshoot_tolerance_pct:
                     status = f"SUCCESS ({err:+.1f}%)"
+                    all_too_dense = False
                 elif err > macs_overshoot_tolerance_pct:
                     status = f"TOO DENSE — {err:+.1f}% over target (need sparser)"
                 else:
                     status = f"TOO SPARSE — {err:+.1f}% under target (need denser)"
+                    all_too_dense = False
                 macs_display = f"{float(achieved_macs)/1e9:.3f}G"
             else:
                 status = "no MACs recorded"
                 macs_display = "N/A"
-            lines.append(f"Attempt {i}: attn={attn_str}, mlp={mlp_str} → {macs_display}  [{status}]")
+                all_too_dense = False
+            lines.append(f"Attempt {i}: mlp={mlp_str}, attn={attn_str} → {macs_display}  [{status}]")
             if dataset.lower() == 'imagenet':
                 acc = entry.get('fine_tuned_top1_accuracy', entry.get('zero_shot_top1_accuracy'))
             else:
@@ -786,7 +812,48 @@ def format_vit_history_analysis(history, target_macs, baseline_macs, macs_oversh
             if acc is not None:
                 lines.append(f"          accuracy: {acc:.2f}%")
         lines.append("")
-        lines.append("DO NOT repeat any (attn_nm, mlp_nm) combination already listed above.")
+
+        # Dynamically build forbidden list from history — show (attn_nm, mlp_nm) pairs
+        forbidden_pairs = []
+        for e in history:
+            nm_e = e.get('strategy_used', {}).get('maskllm_nm_patterns', {})
+            mlp_e = nm_e.get('mlp_nm') or {}
+            attn_e = nm_e.get('attn_nm') or {}
+            if mlp_e.get('N') is not None:
+                attn_str_e = f"{attn_e.get('N')}:{attn_e.get('M')}" if attn_e.get('N') is not None else "null"
+                forbidden_pairs.append(f"❌ (attn={attn_str_e}, mlp={mlp_e.get('N')}:{mlp_e.get('M')})")
+        if forbidden_pairs:
+            lines.append("FORBIDDEN (attn_nm, mlp_nm) PAIRS — YOU MUST NOT REPEAT ANY OF THESE EXACT COMBINATIONS:")
+            lines.append("  " + "  ".join(forbidden_pairs))
+            lines.append("Pick a combination where EITHER attn_nm OR mlp_nm (or both) differs from every forbidden pair above.")
+        lines.append("")
+
+        # Adaptive strategy guidance based on history pattern
+        if all_too_dense and len(history) >= 1:
+            # Find the sparsest mlp_nm tried so far
+            mlp_densities = [
+                e.get('strategy_used', {}).get('maskllm_nm_patterns', {}).get('mlp_nm', {})
+                for e in history
+            ]
+            min_mlp_density = min(
+                (d.get('N', 1) / max(d.get('M', 1), 1) for d in mlp_densities if d),
+                default=1.0
+            )
+            if min_mlp_density < 0.40:
+                lines.append(
+                    "ADAPTIVE GUIDANCE: All previous attempts were TOO DENSE. "
+                    f"MLP has already been pushed to {min_mlp_density:.0%} density — "
+                    "further MLP reduction risks accuracy loss. "
+                    "Reduce attn_nm by 1-2 table steps to absorb the remaining MAC gap."
+                )
+            else:
+                lines.append(
+                    "ADAPTIVE GUIDANCE: All previous attempts were TOO DENSE. "
+                    "Reduce mlp_nm by 1-2 table steps (go sparser). "
+                    "Keep attn_nm the same or reduce it by at most 1 step."
+                )
+            lines.append("")
+
         return "\n".join(lines)
 
     # Structural pruning history (unchanged below)
@@ -1017,7 +1084,7 @@ def format_analysis_prompt(state):
     # Format Master Agent MAC suggestions for the prompt
     master_suggestions = []
     if master_suggested_macs is not None:
-        master_suggestions.append(f"- Target MACs: {master_suggested_macs:.3f}G")
+        master_suggestions.append(f"- Target MACs: {master_suggested_macs/1e9:.3f}G")
     if master_suggested_round_to is not None:
         master_suggestions.append(f"- Round-To: {master_suggested_round_to} (for MAC measurement stability)")
     if master_suggested_importance is not None:
@@ -1100,7 +1167,7 @@ MAC Focus: Achieve {target_macs:.3f}G +{macs_overshoot_tolerance_pct:.1f}%/-{mac
     history = state.get('history', [])
     if architecture_type == "vit" and history:
         previous_strategies = format_vit_history_analysis(
-            history, target_macs, baseline_macs, macs_overshoot_tolerance_pct, macs_undershoot_tolerance_pct, dataset
+            history, target_macs, baseline_macs, macs_overshoot_tolerance_pct, macs_undershoot_tolerance_pct, dataset,
         )
     elif history:
         strategies = []

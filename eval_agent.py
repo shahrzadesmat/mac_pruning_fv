@@ -400,9 +400,13 @@ class EvaluationAgent:
                 
                 fine_tuned_model = fine_tuned_model.to(device)
 
-                original_model = state.get('original_model')
-                if original_model:
-                    fine_tuned_model = reattach_heads_and_tokens(fine_tuned_model, original_model)
+                # For MaskLLM, N:M sparsity never changes model dimensions, so the
+                # fine-tuned model already has its own correct head. Reattaching from the
+                # original model would OVERWRITE the fine-tuned head and hurt accuracy.
+                if state.get('pruning_method') != 'maskllm':
+                    original_model = state.get('original_model')
+                    if original_model:
+                        fine_tuned_model = reattach_heads_and_tokens(fine_tuned_model, original_model)
 
                 ft_results = self._evaluate_model(fine_tuned_model, test_loader, device, dataset)
                 
