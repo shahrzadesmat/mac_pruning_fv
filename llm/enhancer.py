@@ -92,6 +92,7 @@ Output format (JSON only, no markdown):
     def _get_dataset_constraints(self, dataset):
         """Dataset constraints (unchanged API; now phrased without ratios)"""
         if dataset.lower() == 'imagenet':
+            _num_classes = 1000
             max_mlp = 0.15  # 15% MLP pruning cap (conservative)
             max_qkv = 0.10  # 10% QKV pruning cap (conservative)
             return f"""
@@ -103,7 +104,7 @@ CRITICAL IMAGENET CONSTRAINTS (NEVER EXCEED):
 🚨 ATTENTION HEADS: 0% pruning (head_multiplier = 0.0)
 
 WHY THESE LIMITS ARE CRITICAL:
-- ImageNet requires complex 1000-class discrimination
+- {dataset.upper()} requires complex {_num_classes}-class discrimination
 - Over-pruning MLP/QKV collapses accuracy
 - These limits help ensure models stay within MAC tolerance bounds
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

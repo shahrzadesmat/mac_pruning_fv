@@ -31,20 +31,20 @@ class AttentionCouple:
     def validate_coupling(self):
         return self.qkv.out_features // 3 == self.proj.in_features
 
-class PruningState(TypedDict):
+class PruningState(TypedDict, total=False):
     query: str
     model: Any  # PyTorch model
-    
+
     # MAC-based fields (primary)
     baseline_macs: float
     target_macs: float
     macs_overshoot_tolerance_pct: float
     macs_undershoot_tolerance_pct: float
     attempted_macs_g: List[float]
-    
+
     # Legacy ratio field (for backward compatibility)
     attempted_pruning_ratios: List[float]
-    
+
     profile_results: Dict
     master_results: Dict
     analysis_results: Dict
@@ -58,3 +58,6 @@ class PruningState(TypedDict):
     num_classes: int  # 10 for CIFAR-10, 1000 for ImageNet
     input_size: int  # 32 for CIFAR-10, 224 for ImageNet
     data_path: str  # Path to dataset
+
+    # MaskLLM-specific flags
+    pruning_method: str

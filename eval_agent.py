@@ -53,16 +53,18 @@ def reattach_heads_and_tokens(model, original_model):
         if hasattr(model, 'head') and hasattr(original_model, 'head'):
             if isinstance(model.head, nn.Linear) and isinstance(original_model.head, nn.Linear):
                 if model.head.in_features == original_model.head.in_features:
-                    model.head.load_state_dict(original_model.head.state_dict())
-                    print(f"[✅] Reattached head (dim: {model.head.in_features})")
+                    strict = type(model.head) == type(original_model.head)
+                    model.head.load_state_dict(original_model.head.state_dict(), strict=strict)
+                    print(f"[✅] Reattached head (dim: {model.head.in_features}, strict={strict})")
                 else:
                     print(f"[⚠️] Skipping head - dim mismatch: {model.head.in_features} != {original_model.head.in_features}")
 
         if hasattr(model, 'head_dist') and hasattr(original_model, 'head_dist'):
             if isinstance(model.head_dist, nn.Linear) and isinstance(original_model.head_dist, nn.Linear):
                 if model.head_dist.in_features == original_model.head_dist.in_features:
-                    model.head_dist.load_state_dict(original_model.head_dist.state_dict())
-                    print(f"[✅] Reattached head_dist (dim: {model.head_dist.in_features})")
+                    strict = type(model.head_dist) == type(original_model.head_dist)
+                    model.head_dist.load_state_dict(original_model.head_dist.state_dict(), strict=strict)
+                    print(f"[✅] Reattached head_dist (dim: {model.head_dist.in_features}, strict={strict})")
                 else:
                     print(f"[⚠️] Skipping head_dist - dim mismatch: {model.head_dist.in_features} != {original_model.head_dist.in_features}")
 
@@ -398,9 +400,13 @@ class EvaluationAgent:
                 
                 fine_tuned_model = fine_tuned_model.to(device)
 
-                original_model = state.get('original_model')
-                if original_model:
-                    fine_tuned_model = reattach_heads_and_tokens(fine_tuned_model, original_model)
+                # For MaskLLM, N:M sparsity never changes model dimensions, so the
+                # fine-tuned model already has its own correct head. Reattaching from the
+                # original model would OVERWRITE the fine-tuned head and hurt accuracy.
+                if state.get('pruning_method') != 'maskllm':
+                    original_model = state.get('original_model')
+                    if original_model:
+                        fine_tuned_model = reattach_heads_and_tokens(fine_tuned_model, original_model)
 
                 ft_results = self._evaluate_model(fine_tuned_model, test_loader, device, dataset)
                 
@@ -454,8 +460,8 @@ class EvaluationAgent:
                           f"({pct:.1f}% relative)" if pct != float('inf') else f"[📈] CORRECT Accuracy improvement: {improvement:.2f}% (∞% relative)")
 
             # Check MAC deviation and success flags (dataset-aware)
-            mac_overshoot_tolerance_g = target_macs * (macs_overshoot_tolerance_pct / 100.0)
-            mac_undershoot_tolerance_g = target_macs * (macs_undershoot_tolerance_pct / 100.0)
+            mac_overshoot_tolerance_g = (target_macs / 1e9) * (macs_overshoot_tolerance_pct / 100.0)
+            mac_undershoot_tolerance_g = (target_macs / 1e9) * (macs_undershoot_tolerance_pct / 100.0)
 
             # Then check against the appropriate tolerance
             mac_error = achieved_macs - target_macs

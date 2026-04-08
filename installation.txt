@@ -1,0 +1,23 @@
+# Installing sqlite for python 3.12.12
+
+# Create a directory for local installations
+mkdir -p ~/.local
+cd ~/.local
+
+# Download and compile SQLite from source
+wget https://www.sqlite.org/2024/sqlite-autoconf-3450200.tar.gz
+tar xzf sqlite-autoconf-3450200.tar.gz
+cd sqlite-autoconf-3450200
+./configure --prefix=$HOME/.local/sqlite
+make && make install
+
+# Now install Python with pyenv pointing to your local SQLite
+cd ~
+pyenv uninstall 3.12.12
+
+# Set environment variables to use your local SQLite
+export LDFLAGS="-L$HOME/.local/sqlite/lib"
+export CPPFLAGS="-I$HOME/.local/sqlite/include"
+export LD_LIBRARY_PATH="$HOME/.local/sqlite/lib:$LD_LIBRARY_PATH"
+
+pyenv install 3.12.12

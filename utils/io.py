@@ -121,7 +121,7 @@ async def save_final_best_model(state):
 
     print(
         f"\n[🏆] Selected revision {revision} "
-        f"({achieved_macs:.3f}G MAC achieved, {mac_efficiency:.1f}% efficiency) "
+        f"({achieved_macs/1e9:.3f}G MAC achieved, {mac_efficiency:.1f}% efficiency) "
         f"with fine‑tuned {acc_label}: {best_ft_acc:.2f}%"
     )
 
@@ -135,7 +135,7 @@ async def save_final_best_model(state):
     # 3‑A: Load from the stored checkpoint with multiple key attempts
     if pruned_checkpoint and os.path.exists(pruned_checkpoint):
         try:
-            ckpt = torch.load(pruned_checkpoint, map_location='cpu')
+            ckpt = torch.load(pruned_checkpoint, map_location='cpu', weights_only=False)
             # print(f"[DEBUG] Checkpoint keys: {list(ckpt.keys())}")
             
             # Try different possible keys where the model might be stored
@@ -173,7 +173,7 @@ async def save_final_best_model(state):
     # ──────────────────────────────────────────────────────────────────────────
     base_filename = (
         f"final_pruned_{model_name}_{dataset}_rev{revision}"
-        f"_macs{achieved_macs:.3f}G"
+        f"_macs{achieved_macs/1e9:.3f}G"
     )
     
     # 4-A: Save state dict (weights only) - RECOMMENDED for portability
@@ -226,7 +226,7 @@ async def save_final_best_model(state):
         'fine_tuned_accuracy': best_ft_acc,
         'zero_shot_accuracy': best_zs_acc,
         'accuracy_type': acc_label,
-        'pruning_method': 'isomorphic_dependency_aware',
+        'pruning_method': best_candidate.get('strategy_used', {}).get('pruning_method', 'isomorphic_dependency_aware'),
         'saved_formats': {
             'weights_only': weights_filename,
             'full_model': full_filename

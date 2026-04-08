@@ -32,10 +32,17 @@ from utils.analysis_structures import (
 from utils.analysis_isomorphism import IsomorphicGroup
 from utils.logging_wandb import log_to_wandb
 from utils.model_factory import get_model
+from maskllm.maskllm import MaskedLinear, MaskedLinearFrozen
+from maskllm.sparsegpt import prune_sparsegpt
+from maskllm.utils import replace_linear_with_
+from timm.optim import create_optimizer_v2
+from timm.scheduler import create_scheduler_v2
+from timm import utils as timm_utils
+from contextlib import suppress
 
 
 MIN_HEAD_DIM = 6       # Minimum 32 for stable attention
-MAX_SAFE_ATTN_PRUNE = 0.9  # Max 85% pruning on attention
+MAX_SAFE_ATTN_PRUNE = 0.85  # Max 85% pruning on attention
 MIN_MLP_DIM = 48       # Can go lower - MLP is less critical
 
 class PruningAgent:
@@ -62,7 +69,10 @@ class PruningAgent:
                 model = get_model(model_name_normalized, num_classes, pretrained=False)
                 # print(f"[🔧] Created ImageNet model: {model_name_normalized} without pretrained weights")
         else:
-            model = get_model(model_name_normalized, num_classes, pretrained=False)
+            try:
+                model = get_model(model_name_normalized, num_classes, pretrained=True)
+            except Exception:
+                model = get_model(model_name_normalized, num_classes, pretrained=False)
             # print(f"[🔧] Created {dataset} model: {model_name_normalized}")
         
         for param in model.parameters():
@@ -476,6 +486,10 @@ class PruningAgent:
         vit_types = ['vit', 'deit', 'beit', 'swin', 'nvit', 'upop']
 
         is_vit = any(vit_type in model_name.lower() for vit_type in vit_types)
+        if is_vit and state.get('pruning_method') == 'maskllm':
+            # print(f"[🔍] Detected ViT/Transformer architecture: {model_name}")
+            # print(f"[🔄] Routing to MaskLLM VIT pruning method...")
+            return await self._execute_maskllm_pruinng(state, model_name)
         is_cnn = (not is_vit and 
                 (arch_type in ['resnet', 'convnext', 'cnn'] or 
                 any(cnn_type in model_name.lower() for cnn_type in cnn_types)))
@@ -698,7 +712,7 @@ class PruningAgent:
         best_top5_accuracy = None
         attempted_ratios = state.get('attempted_pruning_ratios', [])
 
-
+        # TODO: Why is this twice ?
         if target_ratio is None:
             # We're in MACs-first mode, need to calculate ratio
             device = self.get_device()
@@ -722,6 +736,8 @@ class PruningAgent:
 
         try:
             # 🧩 1. Prepare model and base MACs
+
+            # TODO: Third time why ?
             model = self._prepare_model(model_name, device, dataset, num_classes)
 
             # INSERT AFTER LINE 717
@@ -1975,7 +1991,689 @@ class PruningAgent:
 
             self._attention_update_count = getattr(self, "_attention_update_count", 0) + 1
 
+    async def _execute_maskllm_pruinng(self, state, model_name):
+        """Full MaskLLM pipeline: SparseGPT init -> MaskLLM training -> Extract masks -> Return model"""
+        print("\n[🔧] Starting MaskLLM pruning pipeline...")
 
+        dataset = state.get("dataset", "cifar10")
+        num_classes = state.get("num_classes", 10)
+        input_size = state.get("input_size", 224)
+        data_path = state.get("data_path", "./data")
+
+        analysis_results = state.get("analysis_results", {})
+        self._current_analysis_results = analysis_results
+        target_macs = state.get("target_macs")
+        target_ratio = None
+
+        if target_macs is None:
+            target_ratio = analysis_results.get("pruning_ratio")
+            if target_ratio is None:
+                target_ratio = analysis_results.get("suggested_pruning_ratio")
+                if target_ratio is None:
+                    target_ratio = state.get("target_pruning_ratio")
+
+            device = self.get_device()
+            temp_model = self._prepare_model(model_name, device, dataset, num_classes)
+            example_inputs = (torch.randn(1, 3, input_size, input_size).to(device),)
+            base_macs, _ = tp.utils.count_ops_and_params(temp_model, example_inputs)
+            target_macs = float(base_macs) * (1.0 - float(target_ratio))
+            del temp_model
+        else:
+            target_ratio = None
+
+        print(f"[🎯] Target pruning ratio: {target_ratio:.4f}" if target_ratio is not None else "[🎯] Using MACs-first approach, target ratio will be derived")
+
+        current_revision = state.get('revision_number', 0)
+
+        # Extract round-to value
+        round_to_value = analysis_results.get("round_to_value")
+        if round_to_value is None:
+            strategy_dict = analysis_results.get("strategy_dict", {})
+            round_to_value = strategy_dict.get("round_to", None)
+        print(f"[📏] Using round-to value: {round_to_value}")
+
+        # Extract isomorphic group ratios
+        isomorphic_group_ratios = analysis_results.get("isomorphic_group_ratios")
+        if isomorphic_group_ratios is None:
+            strategy_dict = analysis_results.get("strategy_dict", {})
+            isomorphic_group_ratios = strategy_dict.get("isomorphic_group_ratios", {})
+
+        if not isomorphic_group_ratios:
+            if dataset.lower() == "imagenet":
+                isomorphic_group_ratios = {
+                    "qkv_multiplier": 0.2,
+                    "mlp_multiplier": 0.2,
+                    "proj_multiplier": 0.2,
+                    "head_multiplier": 0.2,
+                }
+            else:  # CIFAR-10
+                isomorphic_group_ratios = {
+                    "qkv_multiplier": 0.25,
+                    "mlp_multiplier": 0.50,
+                    "proj_multiplier": 0.0,
+                    "head_multiplier": 0.0,
+                }
+            print(f"[🔧] Using conservative default {dataset} isomorphic ratios: {isomorphic_group_ratios}")
+        else:
+            print(f"[🔧] Using LLM-suggested isomorphic ratios: {isomorphic_group_ratios}")
+
+        # Get rationale if available
+        rationale = analysis_results.get("rationale")
+        if rationale:
+            print(f"[💡] Rationale: {rationale}")
+
+        # Check for direct N:M patterns from agent (new MaskLLM-specific path)
+        maskllm_nm_patterns = analysis_results.get("maskllm_nm_patterns")
+        if maskllm_nm_patterns is None:
+            strategy_dict_lookup = analysis_results.get("strategy_dict", {})
+            maskllm_nm_patterns = strategy_dict_lookup.get("maskllm_nm_patterns")
+
+        attn_nm = None
+        mlp_nm  = None
+        if maskllm_nm_patterns:
+            attn_nm = maskllm_nm_patterns.get("attn_nm")
+            mlp_nm  = maskllm_nm_patterns.get("mlp_nm")
+            print(f"[🎯] Direct N:M patterns from agent: attn={attn_nm}, mlp={mlp_nm}")
+        else:
+            print(f"[🔧] No maskllm_nm_patterns in analysis_results — using ratio_to_nm fallback via groups")
+
+        tolerance = 0.02  # Acceptable deviation from target MACs
+        device = self.get_device()
+        print(f"[💻] Using device: {device}")
+
+        # Setup dataset-appropriate data loader
+        try:
+            # Adjust batch size based on dataset and available memory
+            if dataset.lower() == 'imagenet':
+                batch_size = 64  # Smaller batch size for ImageNet
+            else:
+                batch_size = 64  # Standard for CIFAR-10
+
+            train_loader, val_loader = self._setup_dataset_loader(dataset, data_path, batch_size)
+            criterion = nn.CrossEntropyLoss().to(device)
+
+            # 💾 Save the unpruned original model for reattachment later
+            print("[💾] Creating deep copy of unpruned original model before pruning...")
+            original_model = self._prepare_model(model_name, device, dataset, num_classes)
+            original_model.eval()
+            state["original_model"] = copy.deepcopy(original_model)
+            print("[✅] Original unpruned model stored in state for later reattachment.")
+        except Exception as e:
+            print(f"[❌] Failed to setup data loader: {e}")
+            return {**state, 'error': f'Data loader setup failed: {str(e)}'}
+
+        # Tracking variables
+        best_model = None
+        best_accuracy = -float('inf')
+        best_ratio = None
+        best_state_dict = None
+        best_top5_accuracy = None
+        attempted_ratios = state.get('attempted_pruning_ratios', [])
+
+        try:
+            # ================================================================
+            # PHASE 1: SparseGPT Initialization
+            # ================================================================
+            print("\n[Phase 1] SparseGPT Initialization...")
+
+            model = self._prepare_model(model_name, device, dataset, num_classes)
+            example_inputs = (torch.randn(1, 3, input_size, input_size).to(device),)
+            base_macs, _ = tp.utils.count_ops_and_params(model, example_inputs)
+            base_params = sum(p.numel() for p in model.parameters())
+            print(f"[📊] Base model: {base_params:,} params, {base_macs/1e9:.3f}G MACs")
+
+            if target_ratio is None:
+                target_ratio = 1.0 - (target_macs / base_macs)
+                print(f"[🔄] Calculated target ratio from MACs: {target_ratio:.4f}")
+
+            current_ratio = target_ratio
+            if current_ratio in attempted_ratios:
+                print(
+                    f"[⚠️] Ratio {current_ratio:.4f} was previously attempted, but Analysis Agent suggested it again.")
+            attempted_ratios.append(current_ratio)
+
+            # Create isomorphic groups
+            analyzer = ViTIsomorphicAnalyzer(model)
+            groups = analyzer.create_isomorphic_groups(
+                target_macs=target_macs,
+                baseline_macs=base_macs,
+                isomorphic_group_ratios=isomorphic_group_ratios
+            )
+
+            # Replace Linear -> MaskedLinearFrozen and run SparseGPT
+            # attn_nm/mlp_nm override ratio_to_nm when provided by the agent directly
+            # Exclude ALL classifier heads (DeiT-distilled has both head and head_dist)
+            _phase1_exclude = [m for attr in ('head', 'head_dist') if hasattr(model, attr)
+                               for m in [getattr(model, attr)] if isinstance(m, nn.Linear)]
+            replace_linear_with_(model, MaskedLinearFrozen, exclude=_phase1_exclude,
+                                 groups=groups, attn_nm=attn_nm, mlp_nm=mlp_nm)
+            prune_sparsegpt(model, val_loader, nsamples=128, batch_size=batch_size,
+                            device=device, groups=groups, attn_nm=attn_nm, mlp_nm=mlp_nm)
+
+            # Save SparseGPT state (weights + masks)
+            sparsegpt_state_dict = model.state_dict()
+            print("[✅] SparseGPT initialization complete")
+
+            # Log sparsity per layer
+            for name, m in model.named_modules():
+                if hasattr(m, 'mask'):
+                    sparsity = 1 - torch.sum(m.mask).item() / m.mask.numel()
+                    print(f"  Layer {name} sparsity: {sparsity:.3f}")
+
+            # ================================================================
+            # PHASE 2: MaskLLM Training (learn optimal masks)
+            # ================================================================
+            print("\n[Phase 2] MaskLLM Mask Learning...")
+
+            # Create fresh model with MaskedLinear (learnable gates)
+            maskllm_model = timm.create_model(model_name, pretrained=False, num_classes=num_classes)
+            _phase2_exclude = [m for attr in ('head', 'head_dist') if hasattr(maskllm_model, attr)
+                               for m in [getattr(maskllm_model, attr)] if isinstance(m, nn.Linear)]
+            replace_linear_with_(maskllm_model, MaskedLinear, exclude=_phase2_exclude,
+                                 groups=groups, attn_nm=attn_nm, mlp_nm=mlp_nm)
+
+            # Log MaskLLM model parameters (with gate params)
+            total_params = sum(p.numel() for p in maskllm_model.parameters())
+            gate_params = sum(p.numel() for n, p in maskllm_model.named_parameters() if '.gate' in n)
+            weight_params = total_params - gate_params
+            print(f"[📊] MaskLLM model (before training):")
+            print(f"  Total params:  {total_params:,}")
+            print(f"  Weight params: {weight_params:,}")
+            print(f"  Gate params:   {gate_params:,} ({100*gate_params/total_params:.2f}%)")
+            for name, module in maskllm_model.named_modules():
+                if isinstance(module, MaskedLinear):
+                    print(f"  {name}: N={module.N}, M={module.M}, C(M,N)={module._mask_options.size(0)}, "
+                          f"blocks={module.num_blocks:,}, gate_params={module.gate.numel():,}")
+
+            # Load SparseGPT weights+masks (gate params will be missing -> initialized randomly)
+            maskllm_model.load_state_dict(sparsegpt_state_dict, strict=False)
+
+            # Initialize gate priors from SparseGPT masks
+            for name, module in maskllm_model.named_modules():
+                if isinstance(module, MaskedLinear):
+                    module.load_mask_prior(prior_strength=3)
+
+            # Freeze all params except gates
+            print("[🔒] Freezing all parameters except .gate...")
+            for name, param in maskllm_model.named_parameters():
+                if '.gate' not in name:
+                    param.requires_grad = False
+
+            maskllm_model.to(device)
+
+            # MaskLLM training config
+            maskllm_config = {
+                'lr': 1e-3,
+                'weight_decay': 0.01,
+                'opt': 'adamw',
+                'sched': 'cosine',
+                'warmup_epochs': 0,
+                'min_lr': 1e-4,
+                'tau_range': [4.0, 0.05],
+                'scaling_range': [10.0, 100.0],
+                'sparse_weight_reg': 1e-5,
+                'clip_grad': 2.0,
+                'smoothing': 0.1,
+                'amp': torch.cuda.is_available(),
+                'epochs': 15 if dataset.lower() != 'imagenet' else 5,
+            }
+
+            # Setup optimizer and scheduler
+            optimizer = create_optimizer_v2(
+                maskllm_model,
+                opt=maskllm_config['opt'],
+                lr=maskllm_config['lr'],
+                weight_decay=maskllm_config['weight_decay'],
+            )
+            lr_scheduler, num_epochs = create_scheduler_v2(
+                optimizer,
+                sched=maskllm_config['sched'],
+                num_epochs=maskllm_config['epochs'],
+                warmup_lr=1e-6,
+                warmup_epochs=maskllm_config['warmup_epochs'],
+                min_lr=maskllm_config['min_lr'],
+            )
+
+            train_loss_fn = nn.CrossEntropyLoss(label_smoothing=maskllm_config['smoothing']).to(device)
+            validate_loss_fn = nn.CrossEntropyLoss().to(device)
+
+            amp_autocast = torch.amp.autocast('cuda') if maskllm_config['amp'] else suppress()
+            loss_scaler = timm_utils.NativeScaler() if maskllm_config['amp'] else None
+
+            print(f"[🎯] MaskLLM training: {num_epochs} epochs, lr={maskllm_config['lr']}")
+
+            # Early stopping: stop if Top-1 doesn't improve by >0.1% for patience epochs
+            _es_patience = 3
+            _es_best_top1 = 0.0
+            _es_no_improve = 0
+
+            # Training loop
+            for epoch in range(num_epochs):
+                # Update tau and scaling (linear annealing)
+                tau = maskllm_config['tau_range'][0] + (maskllm_config['tau_range'][1] - maskllm_config['tau_range'][0]) * epoch / max(num_epochs - 1, 1)
+                scaling = maskllm_config['scaling_range'][0] + (maskllm_config['scaling_range'][1] - maskllm_config['scaling_range'][0]) * epoch / max(num_epochs - 1, 1)
+
+                for m in maskllm_model.modules():
+                    if isinstance(m, MaskedLinear):
+                        m.tau = tau
+                        m.scaling = scaling
+
+                print(f"[Epoch {epoch}/{num_epochs}] tau={tau:.3f}, scaling={scaling:.1f}")
+
+                # Train one epoch
+                self._maskllm_train_one_epoch(
+                    maskllm_model, train_loader, optimizer, train_loss_fn,
+                    maskllm_config, device, amp_autocast, loss_scaler
+                )
+
+                # Validate
+                eval_metrics = self._maskllm_validate(
+                    maskllm_model, val_loader, validate_loss_fn, device, amp_autocast
+                )
+                print(f"[Epoch {epoch}] Loss: {eval_metrics['loss']:.4f}, Top-1: {eval_metrics['top1']:.2f}%, Top-5: {eval_metrics['top5']:.2f}%")
+
+                lr_scheduler.step(epoch + 1)
+
+                # Early stopping check
+                if eval_metrics['top1'] > _es_best_top1 + 0.1:
+                    _es_best_top1 = eval_metrics['top1']
+                    _es_no_improve = 0
+                else:
+                    _es_no_improve += 1
+                    if _es_no_improve >= _es_patience:
+                        print(f"[⏹️] Early stopping at epoch {epoch}: no improvement for {_es_patience} epochs (best Top-1: {_es_best_top1:.2f}%)")
+                        break
+
+            print("[✅] MaskLLM training complete")
+
+            # ================================================================
+            # PHASE 3: Extract final masks -> MaskedLinearFrozen
+            # ================================================================
+            print("\n[Phase 3] Extracting learned masks...")
+
+            # Extract hard masks and N:M configs from trained MaskedLinear layers
+            learned_masks = {}
+            nm_configs = {}
+            maskllm_model.eval()
+            for name, module in maskllm_model.named_modules():
+                if isinstance(module, MaskedLinear):
+                    # Force mask computation via argmax (eval mode)
+                    module._mask_options = module._mask_options.to(device)
+                    mask_indices = torch.argmax(module.gate, dim=1)
+                    selected_masks = module._mask_options[mask_indices]
+                    full_mask = torch.ones(module.weight.numel(), device=device)
+                    full_mask[:module.divisible_size] = selected_masks.flatten()
+                    hard_mask = full_mask.view(module.out_features, module.in_features)
+
+                    learned_masks[name] = hard_mask.clone()
+                    nm_configs[name] = (module.N, module.M)
+
+            # Create final model with MaskedLinearFrozen + learned masks
+            final_model = timm.create_model(model_name, pretrained=False, num_classes=num_classes)
+
+            # Derive attn_nm/mlp_nm from nm_configs (ground truth from trained model),
+            # not from the outer attn_nm/mlp_nm which may have drifted or be None.
+            attn_nm_phase3 = None
+            mlp_nm_phase3 = None
+            for layer_name, (N, M) in nm_configs.items():
+                parts = layer_name.split('.')
+                if 'attn' in parts and attn_nm_phase3 is None:
+                    attn_nm_phase3 = {'N': N, 'M': M}
+                elif 'mlp' in parts and mlp_nm_phase3 is None:
+                    mlp_nm_phase3 = {'N': N, 'M': M}
+            print(f"[🎯] Phase 3 N:M from trained model: attn={attn_nm_phase3}, mlp={mlp_nm_phase3}")
+            # Warn if Phase 3 derived values diverge from what the LLM originally selected
+            def _nm_str(nm): return f"{nm['N']}:{nm['M']}" if nm else "None"
+            if _nm_str(attn_nm_phase3) != _nm_str(attn_nm):
+                print(f"[⚠️] attn_nm divergence: LLM selected {_nm_str(attn_nm)}, trained model has {_nm_str(attn_nm_phase3)}")
+            if _nm_str(mlp_nm_phase3) != _nm_str(mlp_nm):
+                print(f"[⚠️] mlp_nm divergence: LLM selected {_nm_str(mlp_nm)}, trained model has {_nm_str(mlp_nm_phase3)}")
+
+            _phase3_exclude = [m for attr in ('head', 'head_dist') if hasattr(final_model, attr)
+                               for m in [getattr(final_model, attr)] if isinstance(m, nn.Linear)]
+            replace_linear_with_(final_model, MaskedLinearFrozen, exclude=_phase3_exclude,
+                                 groups=groups, attn_nm=attn_nm_phase3, mlp_nm=mlp_nm_phase3)
+
+            # Copy weights from MaskLLM-trained model and set learned masks
+            maskllm_state = maskllm_model.state_dict()
+
+            # Filter out gate params (MaskedLinearFrozen doesn't have them)
+            frozen_compatible_state = {
+                k: v for k, v in maskllm_state.items() if '.gate' not in k
+            }
+            final_model.load_state_dict(frozen_compatible_state, strict=True)
+
+            # Set the learned hard masks on MaskedLinearFrozen layers
+            for name, module in final_model.named_modules():
+                if isinstance(module, MaskedLinearFrozen) and name in learned_masks:
+                    module.mask.data = learned_masks[name].to(module.weight.device)
+
+            # Ensure all params are unfrozen for finetuning
+            for param in final_model.parameters():
+                param.requires_grad = True
+
+            final_model.to(device)
+
+            # Log frozen model parameters (no gate params)
+            frozen_total = sum(p.numel() for p in final_model.parameters())
+            print(f"[📊] Frozen model (after training):")
+            print(f"  Total params:  {frozen_total:,}")
+            print(f"  Gate params removed: {gate_params:,}")
+            print(f"  Param reduction: {100*gate_params/total_params:.2f}% fewer than MaskLLM model")
+            print("[✅] Final model created with learned frozen masks")
+
+            # Log final sparsity
+            for name, m in final_model.named_modules():
+                if hasattr(m, 'mask') and isinstance(m, MaskedLinearFrozen):
+                    sparsity = 1 - torch.sum(m.mask).item() / m.mask.numel()
+                    print(f"  Final {name} sparsity: {sparsity:.3f}")
+
+            # ================================================================
+            # PHASE 4: Evaluate and return results
+            # ================================================================
+            print("\n[Phase 4] Evaluating final MaskLLM model...")
+
+            evaluation_result = self._evaluate_model(final_model, val_loader, device, dataset)
+
+            if dataset.lower() == 'imagenet':
+                zero_shot_top1, zero_shot_top5 = evaluation_result
+                zero_shot_accuracy = zero_shot_top1
+                print(f"[📊] MaskLLM model - Top-1: {zero_shot_top1:.2f}%, Top-5: {zero_shot_top5:.2f}%")
+            else:
+                zero_shot_accuracy = evaluation_result[0]
+                zero_shot_top5 = None
+                zero_shot_top1 = zero_shot_accuracy
+                print(f"[📊] MaskLLM model accuracy: {zero_shot_accuracy:.2f}%")
+
+            # Compute MACs analytically for MaskLLM N:M sparsity.
+            # tp.count_ops_and_params is NOT suitable: N:M sparsity never changes matrix
+            # dimensions so any profiler returns the same as the dense baseline. The correct
+            # approach is analytical using the profiled MLP MAC fraction:
+            #   effective_macs = base_macs × (mlp_frac × N/M + (1 - mlp_frac))
+            #
+            # Use mlp_nm_phase3/attn_nm_phase3 — ground truth from the trained model.
+            mlp_mac_frac = state.get('mlp_mac_frac')
+            if mlp_mac_frac is None:
+                # Fallback: estimate from param distribution in the model
+                total_linear_params = sum(
+                    m.in_features * m.out_features
+                    for m in final_model.modules()
+                    if isinstance(m, (nn.Linear, MaskedLinearFrozen))
+                )
+                frozen_params = sum(
+                    m.in_features * m.out_features
+                    for m in final_model.modules()
+                    if isinstance(m, MaskedLinearFrozen)
+                )
+                mlp_mac_frac = frozen_params / total_linear_params if total_linear_params > 0 else 0.0
+                print(f"[⚠️] mlp_mac_frac not in state — estimated from params: {mlp_mac_frac:.3f}")
+
+            mlp_density = mlp_nm_phase3.get('N', 1) / mlp_nm_phase3.get('M', 8)
+
+            if attn_nm_phase3:
+                attn_mac_frac = state.get('attn_mac_frac')
+                if attn_mac_frac is None:
+                    # Estimate attn_mac_frac by summing params by layer name
+                    attn_params = sum(
+                        m.in_features * m.out_features
+                        for name, m in final_model.named_modules()
+                        if isinstance(m, (nn.Linear, MaskedLinearFrozen))
+                        and 'attn' in name.split('.')
+                    )
+                    total_linear_params = sum(
+                        m.in_features * m.out_features
+                        for m in final_model.modules()
+                        if isinstance(m, (nn.Linear, MaskedLinearFrozen))
+                    )
+                    attn_mac_frac = attn_params / total_linear_params if total_linear_params > 0 else 0.0
+                    print(f"[⚠️] attn_mac_frac not in state — estimated from attn layer params: {attn_mac_frac:.3f}")
+                attn_density = attn_nm_phase3.get('N', 1) / attn_nm_phase3.get('M', 8)
+                effective_macs = int(base_macs * (
+                    mlp_mac_frac  * mlp_density +
+                    attn_mac_frac * attn_density +
+                    (1.0 - mlp_mac_frac - attn_mac_frac)
+                ))
+            else:
+                attn_mac_frac = None
+                attn_density = None
+                effective_macs = int(base_macs * (mlp_mac_frac * mlp_density + (1.0 - mlp_mac_frac)))
+
+            print(f"[📊] MACs (dense baseline): {base_macs/1e9:.3f}G")
+            print(f"[📊] MACs (sparse, N:M adjusted): {base_macs/1e9:.3f}G -> {effective_macs/1e9:.3f}G")
+            print(f"[📊]   mlp_frac={mlp_mac_frac:.3f}, mlp_density={mlp_density:.4f} ({mlp_nm_phase3})")
+            if attn_nm_phase3:
+                print(f"[📊]   attn_frac={attn_mac_frac:.3f}, attn_density={attn_density:.4f} ({attn_nm_phase3})")
+            final_macs = effective_macs
+
+            macs_reduction = float((base_macs - final_macs) / base_macs)
+            print(f"[📊] MACs reduction (sparse): {macs_reduction*100:.1f}%")
+
+            state['target_macs'] = float(target_macs)
+
+            macs_error_pct = (
+                100.0 * (float(final_macs) - float(target_macs)) / max(float(target_macs), 1e-9)
+                if target_macs is not None else None
+            )
+
+            # Save checkpoint
+            checkpoint_dir = state.get('checkpoint_dir', './checkpoints')
+            os.makedirs(checkpoint_dir, exist_ok=True)
+
+            checkpoint_filename = f"maskllm_{model_name}_{dataset}_rev{current_revision}.pth"
+            checkpoint_path = os.path.join(checkpoint_dir, checkpoint_filename)
+
+            torch.save({
+                'complete_model': final_model,
+                'state_dict': final_model.state_dict(),
+                'dataset': dataset,
+                'num_classes': num_classes,
+                'model_name': model_name,
+                'zero_shot_accuracy': zero_shot_accuracy,
+                'revision_number': current_revision,
+                'pruning_method': 'maskllm',
+                'nm_configs': nm_configs,
+                'isomorphic_group_ratios': isomorphic_group_ratios,
+                'maskllm_nm_patterns': maskllm_nm_patterns,
+                'job_id': os.environ.get('SLURM_JOB_ID', 'local'),
+                'timestamp': datetime.now().isoformat()
+            }, checkpoint_path)
+            print(f"[💾] Saved MaskLLM checkpoint: {checkpoint_path}")
+
+            # Log to wandb
+            log_payload = {
+                "macs_reduction": macs_reduction,
+                "macs_reduction_pct": macs_reduction * 100,
+                "zero_shot_accuracy": zero_shot_accuracy,
+                "parameters": sum(p.numel() for p in final_model.parameters()),
+                "revision_number": current_revision,
+                "baseline_macs": float(base_macs),
+                "achieved_macs": float(final_macs),
+                "pruning_method": "maskllm",
+            }
+            if target_macs is not None:
+                log_payload["target_macs"] = float(target_macs)
+                log_payload["macs_error_pct"] = float(macs_error_pct)
+            log_to_wandb(log_payload, step_name="pruning", dataset=dataset)
+
+            # Build pruning_results
+            pruning_results = {
+                'success': True,
+                'baseline_macs': float(base_macs),
+                'target_macs': float(target_macs) if target_macs is not None else None,
+                'achieved_macs': float(final_macs),
+                'macs_reduction': float(macs_reduction),
+                'macs_error_pct': float(macs_error_pct) if macs_error_pct is not None else None,
+                'achieved_ratio': float(macs_reduction),
+                'checkpoint_path': checkpoint_path,
+                'dataset': dataset,
+                'num_classes': num_classes,
+                'pruned_model_state': copy.deepcopy(final_model.state_dict()),
+                'pruning_method': 'maskllm',
+            }
+
+            if dataset.lower() == 'imagenet':
+                pruning_results.update({
+                    'zero_shot_top1_accuracy': float(zero_shot_top1),
+                    'zero_shot_top5_accuracy': float(zero_shot_top5),
+                    'zero_shot_accuracy': float(zero_shot_top1),
+                })
+            else:
+                pruning_results['zero_shot_accuracy'] = float(zero_shot_accuracy)
+
+            # Build history entry
+            strategy_used = {
+                'pruning_method': 'maskllm',
+                'importance_criterion': 'maskllm',
+                'isomorphic_group_ratios': {
+                    'qkv_multiplier': float(groups['attention_blocks'].pruning_ratio),
+                    'mlp_multiplier': float(groups['mlp_blocks'].pruning_ratio),
+                    'proj_multiplier': 0.0,
+                    'head_multiplier': 0.0,
+                },
+                'maskllm_nm_patterns': maskllm_nm_patterns,
+                'maskllm_epochs': num_epochs,
+                'rationale': rationale if rationale else "MaskLLM N:M semi-structured sparsity",
+            }
+
+            # Determine if within MAC tolerance — use actual state tolerances, not a hardcoded value
+            overshoot_tol = float(state.get('macs_overshoot_tolerance_pct', 1.0))
+            undershoot_tol = float(state.get('macs_undershoot_tolerance_pct', 5.0))
+            within_tolerance = (
+                (-undershoot_tol <= macs_error_pct <= overshoot_tol)
+                if macs_error_pct is not None else False
+            )
+
+            history_entry = {
+                'revision': current_revision,
+                'target_ratio': target_ratio,
+                'achieved_ratio': macs_reduction,
+                'target_macs': target_macs,
+                'achieved_macs': final_macs,
+                'baseline_macs': base_macs,
+                'macs_error_pct': float(macs_error_pct) if macs_error_pct is not None else None,
+                'macs_reduction': macs_reduction,
+                'within_tolerance': within_tolerance,
+                'is_candidate_model': within_tolerance,
+                'dataset': dataset,
+                'strategy_used': strategy_used,
+                'qkv_multiplier': float(groups['attention_blocks'].pruning_ratio),
+                'pruned_model_checkpoint': checkpoint_path,
+            }
+
+            if dataset.lower() == 'imagenet':
+                history_entry.update({
+                    'zero_shot_top1_accuracy': float(zero_shot_top1),
+                    'zero_shot_top5_accuracy': float(zero_shot_top5),
+                    'zero_shot_accuracy': float(zero_shot_top1),
+                    # Placeholder so eval_agent can find and update this entry
+                    'fine_tuned_top1_accuracy': None,
+                    'fine_tuned_top5_accuracy': None,
+                })
+            else:
+                history_entry['zero_shot_accuracy'] = float(zero_shot_accuracy)
+                # Placeholder so eval_agent can find and update this entry
+                history_entry['fine_tuned_accuracy'] = None
+
+            state['history'] = state.get('history', [])
+            state['history'].append(history_entry)
+            state['attempted_pruning_ratios'] = attempted_ratios
+
+            print(f"\n[📊] MaskLLM Pruning Results Summary:")
+            print(f"  MACs reduction: {macs_reduction*100:.2f}%")
+            print(f"  MaskLLM accuracy: {zero_shot_accuracy:.2f}%")
+
+            return {
+                **state,
+                'pruning_results': pruning_results,
+                'prune': {
+                    'model': final_model,
+                    'pruning_results': pruning_results,
+                },
+                'revision_number': current_revision + 1,
+                'model_name': model_name,
+            }
+
+        except Exception as e:
+            import traceback
+            print(f"[❌] MaskLLM pruning failed: {e}")
+            print(traceback.format_exc())
+
+            state["pruning_results"] = {
+                "success": False,
+                "error": f"MaskLLM pruning failed: {str(e)}",
+                "achieved_ratio": 0.0,
+                "zero_shot_accuracy": 0.0,
+                "dataset": dataset,
+            }
+            state['attempted_pruning_ratios'] = attempted_ratios
+            return state
+
+    def _maskllm_train_one_epoch(self, model, loader, optimizer, loss_fn, config, device, amp_autocast, loss_scaler):
+        """Train one epoch for MaskLLM mask learning."""
+        model.train()
+        for batch_idx, batch in enumerate(loader):
+            if isinstance(batch, dict):
+                input = batch['pixel_values'].to(device)
+                target = batch['label'].to(device)
+            else:
+                input, target = batch
+                input, target = input.to(device), target.to(device)
+
+            def _forward():
+                with amp_autocast:
+                    output = model(input)
+                    loss = loss_fn(output, target)
+                    if config['sparse_weight_reg'] > 0:
+                        for m in model.modules():
+                            if isinstance(m, MaskedLinear):
+                                loss += -config['sparse_weight_reg'] * m.sparse_weight_reg()
+                return loss
+
+            if loss_scaler is not None:
+                loss_scaler(_forward(), optimizer, clip_grad=config['clip_grad'], parameters=model.parameters())
+            else:
+                loss = _forward()
+                loss.backward()
+                if config['clip_grad'] is not None:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), config['clip_grad'])
+                optimizer.step()
+
+            optimizer.zero_grad()
+
+    def _maskllm_validate(self, model, loader, loss_fn, device, amp_autocast):
+        """Validate for MaskLLM training."""
+        model.eval()
+        correct1 = correct5 = total = 0
+        loss_sum = 0
+
+        with torch.no_grad():
+            for batch in loader:
+                if isinstance(batch, dict):
+                    input = batch['pixel_values'].to(device)
+                    target = batch['label'].to(device)
+                else:
+                    input, target = batch
+                    input, target = input.to(device), target.to(device)
+
+                with amp_autocast:
+                    output = model(input)
+                    loss = loss_fn(output, target)
+
+                loss_sum += loss.item() * input.size(0)
+                total += input.size(0)
+
+                _, pred = output.topk(5, 1, True, True)
+                pred = pred.t()
+                correct = pred.eq(target.view(1, -1).expand_as(pred))
+                correct1 += correct[:1].reshape(-1).float().sum(0, keepdim=True)
+                correct5 += correct[:5].reshape(-1).float().sum(0, keepdim=True)
+
+        return {
+            'loss': loss_sum / total,
+            'top1': (correct1 / total).item() * 100,
+            'top5': (correct5 / total).item() * 100,
+        }
+    
 def finalize_pruned_model(model, new_embed_dim, calib_loader=None):
     import torch
     import torch.nn as nn

@@ -5,7 +5,6 @@ from finetune_agent import FineTuningAgent
 from eval_agent import EvaluationAgent
 from master_agent import MasterAgent
 from data.loaders import get_dataset_loaders
-from data.loaders import get_dataset_loaders
 from utils.io import save_final_best_model
 from utils.logging_wandb import log_to_wandb
 from utils.analysis_structures import PruningState
@@ -30,44 +29,7 @@ import re
 import os
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
-from dotenv import load_dotenv, find_dotenv
-import openai
-import nest_asyncio
-import asyncio
-import json
-import random
-from torch.utils.data import DataLoader
-import traceback
-
-from datasets import load_dataset
-import torchvision.transforms as T
-from torchvision.transforms.functional import InterpolationMode
-# from pbench.utils import get_interpolation_mode
-import glob
-
-from torchvision.datasets import ImageFolder
-from torchvision import transforms
-from torch.utils.data import DataLoader
-
-import pbench.data.presets
-import pbench.extension
-import pbench.forward_patch
-
-from typing import Dict, List, Tuple, Optional, Any
-from dataclasses import dataclass
-import time
-import functools
-from contextlib import contextmanager
-from collections import defaultdict
 import wandb
-import math
-import threading
-from contextlib import contextmanager
-from sklearn.model_selection import train_test_split
-from torch.utils.data import Subset
-import gc
-import psutil
-import warnings
 from utils.pruning_math import extract_pruning_ratio, extract_mac_target
 from llm.provider import get_llm
 from utils.json_utils import deep_merge
@@ -521,7 +483,7 @@ def create_pruning_workflow():
             print(f"   Total candidates evaluated: {len(candidate_models)}")
             print(f"   Best model: Revision {best_revision}")
             print(f"   Best {accuracy_type}: {best_accuracy:.2f}%")
-            print(f"   MAC achievement: {best_achieved_macs:.3f}G (target: {best_target_macs:.3f}G, error: {best_mac_error:+.1f}%)")
+            print(f"   MAC achievement: {best_achieved_macs/1e9:.3f}G (target: {best_target_macs/1e9:.3f}G, error: {best_mac_error:+.1f}%)")
             
             # Store results for final model saving
             state['final_best_model'] = best_model
@@ -535,9 +497,14 @@ def create_pruning_workflow():
         
         # ✅ CRITICAL: Handle state modifications properly
         if stop_reason == "initialize_phase2":
-            state['extended_search_remaining'] = 20
-            GLOBAL_STATE['extended_search_remaining'] = 20  # Also update global state
-            print(f"[🔧] Initialized extended_search_remaining = 20")
+            # MaskLLM trials are very expensive (~2-3h each); 2 extra trials is sufficient
+            # since the N:M pattern space is discrete and history prevents repeats.
+            # Structural pruning keeps the original 20.
+            phase2_trials = 2 if state.get('pruning_method') == 'maskllm' else 20
+            state['extended_search_remaining'] = phase2_trials
+            GLOBAL_STATE['extended_search_remaining'] = phase2_trials
+            print(f"[🔧] Initialized extended_search_remaining = {phase2_trials} "
+                  f"({'maskllm' if state.get('pruning_method') == 'maskllm' else 'structural'})")
             continue_optimization = True
             stop_reason = None
         elif stop_reason == "continue_phase2":
@@ -591,7 +558,7 @@ def create_pruning_workflow():
                 print(f"[📊] Setting final {dataset} pruning results based on best MAC attempt (achieved: {best_achieved_macs:.3f}G)")
                 if 'prune' not in result:
                     result['prune'] = {}
-                
+
                 result['prune']['pruning_results'] = {
                     'success': True,
                     'achieved_macs': best_achieved_macs,
@@ -599,6 +566,10 @@ def create_pruning_workflow():
                     'mac_error_pct': best_mac_error,
                     'dataset': dataset
                 }
+
+                # Set final_best_model so route_after_master can find it
+                state['final_best_model'] = best_entry
+                result['final_best_model'] = best_entry
 
         GLOBAL_STATE.update(result)
         return result
@@ -653,7 +624,7 @@ def create_pruning_workflow():
                 mac_within_tolerance = (-macs_undershoot_tolerance_pct <= mac_error_pct <= macs_overshoot_tolerance_pct)
                 
                 if mac_within_tolerance:
-                    print(f"[✅] Achieved {achieved_macs/1e9:.3f}G MACs, meets target {target_mac:.3f}G (error: {mac_error_pct:+.1f}%)")
+                    print(f"[✅] Achieved {achieved_macs/1e9:.3f}G MACs, meets target {target_mac/1e9:.3f}G (error: {mac_error_pct:+.1f}%)")
                     # Mark as candidate model
                     result['is_candidate_model'] = True
                     state['is_candidate_model'] = True
@@ -726,8 +697,11 @@ def create_pruning_workflow():
                     entry['zero_shot_accuracy'] = pruning_res.get('zero_shot_accuracy', 0)
                     entry['fine_tuned_accuracy'] = None
                 
-                result.setdefault('history', []).append(entry)
-                GLOBAL_STATE['history'] = result['history']
+                # MaskLLM already appended a complete history entry (with maskllm_nm_patterns)
+                # inside _execute_maskllm_pruinng(). Skip the duplicate here.
+                if state.get('pruning_method') != 'maskllm':
+                    result.setdefault('history', []).append(entry)
+                GLOBAL_STATE['history'] = result.get('history', [])
 
                 # Commit and return
                 GLOBAL_STATE.update(result)
@@ -1121,13 +1095,15 @@ async def run_pruning_workflow(model_name: str, query: str, dataset: str = "cifa
         print(f"[📁] Output directory: {output_dir}") 
         
         if state_mods:
+            if 'pruning_method' in state_mods:
+                pruning_method = state_mods['pruning_method']
+                print(f"[🔧] Set pruning method to {pruning_method}")
             if 'accuracy_threshold' in state_mods:
                 accuracy_threshold = state_mods['accuracy_threshold']
                 print(f"[🔧] Set accuracy threshold to {accuracy_threshold}%")
             if 'max_revisions' in state_mods:
                 max_revisions = state_mods['max_revisions']
                 print(f"[🔧] Set maximum revisions to {max_revisions}")
-
             # Extract and validate MAC targets from state_mods
             target_macs = None
             baseline_macs = None
@@ -1183,6 +1159,7 @@ async def run_pruning_workflow(model_name: str, query: str, dataset: str = "cifa
         GLOBAL_STATE = {
             'target_pruning_ratio': pruning_ratio,
             'user_target_pruning_ratio': pruning_ratio,
+            'pruning_method': pruning_method,
             
             # MAC-based configuration (primary)
             'target_macs': target_macs,
@@ -1211,7 +1188,7 @@ async def run_pruning_workflow(model_name: str, query: str, dataset: str = "cifa
             'input_size': input_size,
             'data_path': data_path,
             'imagenet_subset': imagenet_subset,  # ADD: Include in initial state
-            
+            'pruning_method': pruning_method,
             # MAC-based configuration (primary)
             'target_macs': target_macs,
             'baseline_macs': baseline_macs,

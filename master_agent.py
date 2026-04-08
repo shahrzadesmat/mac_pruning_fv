@@ -76,7 +76,7 @@ class MasterAgent:
             metric_name = 'Accuracy'
         
         formatted = f"MAC-BASED PRUNING HISTORY WITH DATASET-AWARE ANALYSIS ({dataset.upper()}):\n"
-        formatted += f"MAC TARGET: {target_macs:.3f}G from {baseline_macs:.3f}G baseline\n\n"
+        formatted += f"MAC TARGET: {target_macs/1e9:.3f}G from {baseline_macs/1e9:.3f}G baseline\n\n"
         
         # Track MAC-specific parameter values and outcomes
         mac_param_values = {
@@ -155,7 +155,7 @@ class MasterAgent:
                     avg_error = sum(results['mac_error']) / len(results['mac_error']) if results['mac_error'] else None
                     
                     formatted += f"- {criterion} on {dataset}: avg {metric_name} {avg_accuracy:.2f}%, "
-                    formatted += f"avg achieved MACs {avg_macs:.3f}G"
+                    formatted += f"avg achieved MACs {avg_macs/1e9:.3f}G"
                     if avg_error is not None:
                         formatted += f", avg MAC error {avg_error:+.1f}%"
                     formatted += "\n"
@@ -172,7 +172,7 @@ class MasterAgent:
             
             formatted += f"- {metric_name} range: {min_accuracy:.2f}% to {best_accuracy:.2f}% (avg: {avg_accuracy:.2f}%)\n"
             formatted += f"- Best MAC efficiency: {best_mac_efficiency:.1f}% of baseline operations\n"
-            formatted += f"- MAC target: {target_macs:.3f}G ({(target_macs/baseline_macs*100):.1f}% efficiency target)\n"
+            formatted += f"- MAC target: {target_macs/1e9:.3f}G ({(target_macs/baseline_macs*100):.1f}% efficiency target)\n"
             
             # Dataset-specific MAC performance analysis
             target_efficiency = (target_macs / baseline_macs) * 100
@@ -219,8 +219,8 @@ class MasterAgent:
             target_mac = entry.get('target_macs', target_macs)
             achieved_macs = entry.get('achieved_macs', entry.get('final_macs_g'))
             
-            formatted += f"- Target MACs: {target_mac:.3f}G\n"
-            formatted += f"- Achieved MACs: {achieved_macs:.3f}G\n" if achieved_macs else "- Achieved MACs: N/A\n"
+            formatted += f"- Target MACs: {target_mac/1e9:.3f}G\n"
+            formatted += f"- Achieved MACs: {achieved_macs/1e9:.3f}G\n" if achieved_macs else "- Achieved MACs: N/A\n"
             
             if achieved_macs and target_mac:
                 mac_error_pct = ((achieved_macs - target_mac) / target_mac) * 100
@@ -254,9 +254,12 @@ class MasterAgent:
         
         # Validate MAC targets
         suggested_target_macs = directives_dict.get('target_macs', target_macs)
-        
+        # Normalize: LLM returns in G (e.g. 0.700), state stores raw ops (e.g. 700000000)
+        if suggested_target_macs is not None and suggested_target_macs < 1000:
+            suggested_target_macs = suggested_target_macs * 1e9
+
         if abs(suggested_target_macs - target_macs) > target_macs * 0.1:  # More than 10% deviation
-            print(f"[⚠️] Adjusting MAC target from {suggested_target_macs:.3f}G to {target_macs/1e9:.3f}G")
+            print(f"[⚠️] Adjusting MAC target from {suggested_target_macs/1e9:.3f}G to {target_macs/1e9:.3f}G")
             validated['target_macs'] = target_macs
             validated['mac_target_adjustment'] = "Restored to original MAC target"
         
@@ -295,10 +298,10 @@ class MasterAgent:
         
         # Dataset-aware MAC fallback strategy
         if dataset.lower() == 'imagenet':
-            exploration_strategy = f"Use conservative MAC allocation with Taylor importance for ImageNet complexity. Target: {target_macs:.3f}G MAC operations."
+            exploration_strategy = f"Use conservative MAC allocation with Taylor importance for ImageNet complexity. Target: {target_macs/1e9:.3f}G MAC operations."
             isomorphic_group_ratios_priorities = ["importance_criterion", "isomorphic_group_ratios", "round_to"]
         else:
-            exploration_strategy = f"Explore aggressive MAC allocation suitable for CIFAR-10. Target: {target_macs:.3f}G MAC operations."
+            exploration_strategy = f"Explore aggressive MAC allocation suitable for CIFAR-10. Target: {target_macs/1e9:.3f}G MAC operations."
             isomorphic_group_ratios_priorities = ["isomorphic_group_ratios", "importance_criterion", "round_to"]
         
         should_continue = True
@@ -575,14 +578,14 @@ CRITICAL JSON OUTPUT REQUIREMENTS:
         for entry in history:
             achieved_macs = entry.get('achieved_macs', entry.get('final_macs_g'))
             target_mac = entry.get('target_macs', target_macs)
-            acc = entry.get(
-                'zero_shot_top1_accuracy',
-                entry.get('zero_shot_accuracy', 0)
-            ) or 0
-            
+            acc = entry.get('fine_tuned_top1_accuracy',
+                    entry.get('fine_tuned_accuracy',
+                    entry.get('zero_shot_top1_accuracy',
+                    entry.get('zero_shot_accuracy', 0)))) or 0
+
             if achieved_macs is not None and target_mac is not None:
                 mac_error_pct = ((achieved_macs - target_mac) / target_mac) * 100
-                
+
                 if (
                     -macs_undershoot_tolerance_pct <= mac_error_pct <= macs_overshoot_tolerance_pct
                     and acc > accuracy_threshold
@@ -646,8 +649,8 @@ CRITICAL JSON OUTPUT REQUIREMENTS:
             print(f"[💡] Found {len(failed_configs)} MAC catastrophic configs")
             unders = [c for c in failed_configs if c['failure_type'] == 'mac_undershoot']
             overs = [c for c in failed_configs if c['failure_type'] == 'mac_overshoot']
-            print(f"   MAC undershoots (insufficient pruning): {len(unders)}")
-            print(f"   MAC overshoots (excessive pruning): {len(overs)}")
+            print(f"   MAC undershoots (excessive pruning): {len(unders)}")
+            print(f"   MAC overshoots (insufficient pruning): {len(overs)}")
 
             return self._generate_mac_strategic_guidance_from_failures(
                 failed_configs, target_macs, baseline_macs, macs_overshoot_tolerance_pct, macs_undershoot_tolerance_pct
@@ -669,7 +672,10 @@ CRITICAL JSON OUTPUT REQUIREMENTS:
         recent_catastrophic = 0
         
         for i, entry in enumerate(history):
-            accuracy = entry.get('zero_shot_top1_accuracy', entry.get('zero_shot_accuracy', 0)) or 0
+            accuracy = entry.get('fine_tuned_top1_accuracy',
+                        entry.get('fine_tuned_accuracy',
+                        entry.get('zero_shot_top1_accuracy',
+                        entry.get('zero_shot_accuracy', 0)))) or 0
             achieved_macs = entry.get('achieved_macs', entry.get('final_macs_g'))
             
             # Excellent result: high accuracy, close to MAC target
@@ -952,29 +958,29 @@ CRITICAL JSON OUTPUT REQUIREMENTS:
         overshoot_patterns = failed_multiplier_patterns['overshoot_patterns']
         
         if undershoot_patterns:
-            recommendations.append(f"Previous attempts achieved too many MACs (insufficient pruning) - need more aggressive MAC reduction to reach {target_macs/1e9:.3f}G")
+            recommendations.append(f"Previous attempts achieved too few MACs (excessive pruning) - need less aggressive pruning to reach {target_macs/1e9:.3f}G")
             failure_analysis['mac_undershoot_pattern'] = True
-            
+
             # ✅ NEW: Add multiplier-specific guidance for undershoots
             worst_patterns = undershoot_patterns[:3]  # Top 3 worst
-            recommendations.append(f"DANGEROUS MULTIPLIER ZONES identified - avoid these ranges:")
+            recommendations.append(f"OVER-PRUNED MULTIPLIER ZONES identified - these caused too much pruning, avoid these ranges:")
             for i, pattern in enumerate(worst_patterns):
                 mlp_min, mlp_max = pattern['mlp_range']
                 qkv_min, qkv_max = pattern['qkv_range']
                 recommendations.append(f"  Zone {i+1}: mlp_multiplier {mlp_min:.3f}-{mlp_max:.3f}, qkv_multiplier {qkv_min:.3f}-{qkv_max:.3f} (caused {pattern['mac_error_pct']:+.1f}% MAC error)")
-            
+
             # Suggest safe ranges
             if len(worst_patterns) > 0:
                 safe_mlp_max = min(p['mlp_range'][0] for p in worst_patterns) - 0.05
                 safe_qkv_max = min(p['qkv_range'][0] for p in worst_patterns) - 0.05
                 recommendations.append(f"SAFE MULTIPLIER SUGGESTION: Try mlp_multiplier ≤ {max(0.1, safe_mlp_max):.3f}, qkv_multiplier ≤ {max(0.1, safe_qkv_max):.3f}")
-        
+
         if overshoot_patterns:
-            recommendations.append(f"Some attempts achieved too few MACs (excessive pruning) - balance MAC reduction carefully around {target_macs/1e9:.3f}G target")
+            recommendations.append(f"Previous attempts achieved too many MACs (insufficient pruning) - need more aggressive MAC reduction to reach {target_macs/1e9:.3f}G target")
             failure_analysis['mac_overshoot_pattern'] = True
-            
+
             # ✅ NEW: Add multiplier-specific guidance for overshoots
-            recommendations.append("OVERLY AGGRESSIVE MULTIPLIER ZONES identified - these caused too much pruning")
+            recommendations.append("UNDER-PRUNED MULTIPLIER ZONES identified - these did not prune enough, use more aggressive values")
         
         # Add MAC-strategic direction based on patterns
         if len(complete_failed_signatures) >= 3:

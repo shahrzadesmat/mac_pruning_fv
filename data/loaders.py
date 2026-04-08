@@ -156,17 +156,17 @@ def get_cifar10_loaders_pbench(batch_size=64, num_workers=16):
     
     # Use standard transforms for CIFAR-10 to avoid any pbench conflicts
     train_transform = T.Compose([
-        T.RandomCrop(32, padding=4),
+        T.Resize((224, 224), antialias=True),  # Resize first before cropping
+        T.RandomCrop(224, padding=28),
         T.RandomHorizontalFlip(),
         T.ToTensor(),
         T.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-        T.Resize((224, 224), antialias=True)  # Resize to 224 for model compatibility
     ])
-    
+
     val_transform = T.Compose([
+        T.Resize((224, 224), antialias=True),
         T.ToTensor(),
         T.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-        T.Resize((224, 224), antialias=True)
     ])
 
     train_dataset = datasets.CIFAR10(
