@@ -164,19 +164,19 @@ def create_pruning_workflow():
         # Use the updated dataset-aware ProfilingAgent
         result = await ProfilingAgent(llm=shared_llm).profile_model(state)
 
-        # Extract baseline_macs to top level immediately - ENHANCED
+        # Extract baseline_macs and target_macs to top level immediately
         result_profile = result.get('profile_results', {})
         if result_profile and 'baseline_macs' in result_profile:
             calculated_baseline = result_profile['baseline_macs']
             if calculated_baseline is not None:
                 result['baseline_macs'] = calculated_baseline
                 GLOBAL_STATE['baseline_macs'] = calculated_baseline
-                # print(f"[SUCCESS] Extracted baseline_macs: {calculated_baseline/1e9:.3f}G")
-            else:
-                pass    # print(f"[ERROR] Profile results contain None baseline_macs")
-        else:
-            pass    # print(f"[ERROR] No baseline_macs found in profile_results")
-                    # print(f"[DEBUG] profile_results keys: {result_profile.keys() if result_profile else 'No profile_results'}")
+        if result_profile and 'target_macs' in result_profile:
+            resolved_target = result_profile['target_macs']
+            if resolved_target is not None:
+                result['target_macs'] = resolved_target
+                GLOBAL_STATE['target_macs'] = resolved_target
+                print(f"[🔧] Propagated resolved target_macs to state: {resolved_target/1e9:.3f}G")
 
         GLOBAL_STATE.update(result)
         return result
@@ -482,7 +482,21 @@ def create_pruning_workflow():
                 return True, "continue_phase2"
             
             # PHASE 2 COMPLETE: Select best model and finish
-            if dataset.lower() == 'imagenet':
+            skip_ft = state.get('skip_inline_ft', False)
+
+            if skip_ft:
+                # Fine-tuned acc = zero-shot (all ~0.3%, no signal) — pick closest MAC match
+                print("[⏭️] skip_inline_ft: selecting candidate by closest MAC match")
+                best_model = min(candidate_models,
+                                 key=lambda x: abs(x.get('mac_error_pct', float('inf'))))
+                if dataset.lower() == 'imagenet':
+                    best_accuracy = best_model.get('zero_shot_top1_accuracy') or 0.0
+                    accuracy_type = "zero-shot Top-1 (skip_inline_ft)"
+                else:
+                    best_accuracy = best_model.get('zero_shot_accuracy') or 0.0
+                    accuracy_type = "zero-shot accuracy (skip_inline_ft)"
+
+            elif dataset.lower() == 'imagenet':
                 # Filter out candidates that have valid (non-None) fine-tuned Top-1 accuracy
                 valid_candidates = [m for m in candidate_models if m.get('fine_tuned_top1_accuracy') is not None]
 
@@ -491,10 +505,9 @@ def create_pruning_workflow():
                     best_accuracy = best_model.get('fine_tuned_top1_accuracy') or 0.0
                     accuracy_type = "Top-1"
                 else:
-                    # Fallback: No valid accuracy, select based on MAC efficiency instead
                     print("[⚠️] Warning: No candidates have fine-tuned Top-1 accuracy. Falling back to MAC efficiency.")
-                    best_model = min(candidate_models, key=lambda x: x.get('achieved_macs', float('inf')))
-                    best_accuracy = best_model.get('fine_tuned_top1_accuracy') or 0.0  # Will be 0.0 if None
+                    best_model = min(candidate_models, key=lambda x: abs(x.get('mac_error_pct', float('inf'))))
+                    best_accuracy = best_model.get('fine_tuned_top1_accuracy') or 0.0
                     accuracy_type = "Top-1 (no fine-tuned acc)"
 
             else:
@@ -507,8 +520,8 @@ def create_pruning_workflow():
                     accuracy_type = "accuracy"
                 else:
                     print("[⚠️] Warning: No candidates have fine-tuned accuracy. Falling back to MAC efficiency.")
-                    best_model = min(candidate_models, key=lambda x: x.get('achieved_macs', float('inf')))
-                    best_accuracy = best_model.get('fine_tuned_accuracy') or 0.0  # Will be 0.0 if None
+                    best_model = min(candidate_models, key=lambda x: abs(x.get('mac_error_pct', float('inf'))))
+                    best_accuracy = best_model.get('fine_tuned_accuracy') or 0.0
                     accuracy_type = "accuracy (no fine-tuned acc)"
 
             # Common fields
@@ -558,7 +571,23 @@ def create_pruning_workflow():
                 state['baseline_macs'] = profile_baseline
                 GLOBAL_STATE['baseline_macs'] = profile_baseline
                 print(f"[FIX] Retrieved baseline_macs from profile_results: {profile_baseline/1e9:.3f}G")
-        
+
+        # Safety check: resolve target_macs from ratio if still None
+        if state.get('target_macs') is None:
+            profile_target = state.get('profile_results', {}).get('target_macs')
+            if profile_target is not None:
+                state['target_macs'] = profile_target
+                GLOBAL_STATE['target_macs'] = profile_target
+                print(f"[FIX] Retrieved target_macs from profile_results: {profile_target/1e9:.3f}G")
+            else:
+                _ratio = state.get('macs_target_ratio')
+                _baseline = state.get('baseline_macs')
+                if _ratio is not None and _baseline is not None:
+                    _resolved = _baseline * float(_ratio)
+                    state['target_macs'] = _resolved
+                    GLOBAL_STATE['target_macs'] = _resolved
+                    print(f"[FIX] Resolved target_macs from ratio {_ratio}: {_resolved/1e9:.3f}G")
+
         result = await MasterAgent().analyze_and_direct(state)
         
         # If algorithm decided to stop, override Master Agent's decision
@@ -758,6 +787,26 @@ def create_pruning_workflow():
         state = deep_merge(state, GLOBAL_STATE)
 
         dataset = state.get('dataset', 'cifar10')
+
+        # --skip_inline_ft: skip training, mark fine-tuned acc = zero-shot in history
+        if state.get('skip_inline_ft', False):
+            print(f"[⏭️] Skipping inline fine-tuning (--skip_inline_ft)")
+            history = GLOBAL_STATE.get('history', [])
+            if history:
+                last = history[-1]
+                if dataset.lower() == 'imagenet':
+                    zs = last.get('zero_shot_top1_accuracy', 0.0)
+                    last['fine_tuned_top1_accuracy'] = zs
+                    last['fine_tuned_top5_accuracy'] = last.get('zero_shot_top5_accuracy', 0.0)
+                    print(f"[⏭️] Set fine_tuned_top1_accuracy = zero_shot {zs:.2f}% (placeholder)")
+                else:
+                    zs = last.get('zero_shot_accuracy', 0.0)
+                    last['fine_tuned_accuracy'] = zs
+                    print(f"[⏭️] Set fine_tuned_accuracy = zero_shot {zs:.2f}% (placeholder)")
+                GLOBAL_STATE['history'] = history
+            GLOBAL_STATE.update(state)
+            return GLOBAL_STATE
+
         print(f"[🔄] Fine-tuning {dataset} model")
 
         # Ensure model_name and dataset info is present
@@ -1199,7 +1248,12 @@ async def run_pruning_workflow(model_name: str, query: str, dataset: str = "cifa
             'best_models': [],
             'imagenet_subset': imagenet_subset,
             'output_dir': output_dir,
-            'checkpoint_dir': checkpoint_dir
+            'checkpoint_dir': checkpoint_dir,
+            'skip_inline_ft': state_mods.get('skip_inline_ft', False) if state_mods else False,
+            'ablate_profiling': state_mods.get('ablate_profiling', False) if state_mods else False,
+            'ablate_master': state_mods.get('ablate_master', False) if state_mods else False,
+            'ablate_analysis': state_mods.get('ablate_analysis', False) if state_mods else False,
+            'ablate_history': state_mods.get('ablate_history', False) if state_mods else False,
         }
         MODEL_STORE = None
 

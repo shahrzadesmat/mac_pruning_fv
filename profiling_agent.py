@@ -43,8 +43,17 @@ class ProfilingAgent:
         macs_overshoot_tolerance_pct = state.get('macs_overshoot_tolerance_pct', 1.0)
         macs_undershoot_tolerance_pct = state.get('macs_undershoot_tolerance_pct', 5.0)
 
-        overshoot_upper_bound = (target_macs * (1 + macs_overshoot_tolerance_pct/100)) / 1e9
-        undershoot_lower_bound = (target_macs * (1 - macs_undershoot_tolerance_pct/100)) / 1e9
+        # Bounds will be recomputed after baseline is measured if target_macs is None
+        # (ratio mode: target_macs = baseline_macs * macs_target_ratio)
+        def _compute_bounds(tgt):
+            return (
+                (tgt * (1 + macs_overshoot_tolerance_pct / 100)) / 1e9,
+                (tgt * (1 - macs_undershoot_tolerance_pct / 100)) / 1e9,
+            )
+        if target_macs is not None:
+            overshoot_upper_bound, undershoot_lower_bound = _compute_bounds(target_macs)
+        else:
+            overshoot_upper_bound, undershoot_lower_bound = 0.0, 0.0  # placeholder until baseline known
 
         # print(f"[🔍] MAC-aware profiling of {model_name} for {dataset} ({num_classes} classes, {input_size}x{input_size})")
         baseline_str = f"{baseline_macs/1e9:.3f}G" if baseline_macs is not None else "N/A"
@@ -186,6 +195,15 @@ class ProfilingAgent:
                 # print(f"[✅] Measured baseline MACs from calflops: {baseline_macs_for_calc/1e9:.3f}G")
                 # print(f"[✅] Measured baseline MACs from layers: {measured_baseline_macs/1e9:.3f}G")
 
+            # Resolve target_macs from ratio now that baseline is known
+            if target_macs is None and baseline_macs_for_calc > 0:
+                _ratio = state.get('macs_target_ratio')
+                if _ratio is not None:
+                    target_macs = baseline_macs_for_calc * float(_ratio)
+                    target_macs_for_calc = target_macs
+                    overshoot_upper_bound, undershoot_lower_bound = _compute_bounds(target_macs)
+                    print(f"[🔧] Resolved target_macs from ratio {_ratio}: {target_macs/1e9:.3f}G")
+
             mac_distribution = {
                 'estimated_baseline_macs': estimated_total_macs / 1e9 if estimated_total_macs else 0,
                 'mac_reduction_needed_pct': ((baseline_macs_for_calc - target_macs_for_calc) / baseline_macs_for_calc) * 100
@@ -305,7 +323,7 @@ class ProfilingAgent:
                 "input_size": input_size,
                 "model_complexity": "high" if dataset.lower() == 'imagenet' else "moderate",
                 "baseline_macs": measured_baseline_macs or original_baseline_macs or layer_macs,
-                "target_macs": original_target_macs,
+                "target_macs": target_macs,  # use resolved value (may differ from original if ratio mode)
                 "measured_layer_macs": layer_macs,
                 "macs_overshoot_tolerance_pct": macs_overshoot_tolerance_pct,
                 "macs_undershoot_tolerance_pct": macs_undershoot_tolerance_pct,
@@ -316,6 +334,11 @@ class ProfilingAgent:
             if is_subsequent:
                 profile_results["changes_since_initial"] = f"Model has been MAC-pruned and fine-tuned for {dataset} targeting {target_macs:.3f}G operations"
             
+
+            if state.get('ablate_profiling'):
+                print("[🔬] Ablation: skipping Profiling Agent LLM call")
+                profile_results["analysis"] = ""
+                return {'profile_results': profile_results}
 
             # Get MAC-aware dataset-specific content for the prompt
             dataset_content = get_dataset_specific_content(

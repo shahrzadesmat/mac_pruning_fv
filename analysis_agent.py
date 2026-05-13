@@ -130,7 +130,64 @@ class AnalysisAgent:
         """Safely format any value that might be None"""
         return str(value) if value is not None else fallback
     
+    def _get_grid_search_strategy(self, state: Dict, is_cnn: bool) -> Dict:
+        """Return the k-th point from a predefined grid — no LLM, no history, no calibration."""
+        revision = state.get('revision_number', 0)
+
+        if is_cnn:
+            # Uniform sweep of channel_pruning_ratio covering the likely reduction range.
+            # For ResNet-50 at ~51% MAC reduction the "right" ratio is ~0.40-0.50;
+            # this grid deliberately covers a wider range to simulate blind search.
+            grid = [0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70]
+            idx = min(revision, len(grid) - 1)
+            ratio = grid[idx]
+            print(f"[🔲] Grid search: CNN point {idx} — channel_pruning_ratio={ratio}")
+            return {
+                'channel_pruning_ratio': ratio,
+                'importance_criterion': 'taylor',
+                'round_to': 2,
+                'rationale': f'Grid search point {idx}: channel_pruning_ratio={ratio}',
+            }
+        else:
+            # For ViT, sweep (mlp_multiplier, qkv_multiplier) pairs.
+            grid = [
+                (0.30, 0.20), (0.35, 0.25), (0.40, 0.25), (0.45, 0.30), (0.50, 0.30),
+                (0.55, 0.35), (0.60, 0.40), (0.65, 0.40), (0.70, 0.45), (0.75, 0.50),
+            ]
+            idx = min(revision, len(grid) - 1)
+            mlp_mult, qkv_mult = grid[idx]
+            print(f"[🔲] Grid search: ViT point {idx} — mlp={mlp_mult}, qkv={qkv_mult}")
+            return {
+                'isomorphic_group_ratios': {
+                    'mlp_multiplier': mlp_mult,
+                    'qkv_multiplier': qkv_mult,
+                },
+                'importance_criterion': 'taylor',
+                'round_to': 8,
+                'rationale': f'Grid search point {idx}: mlp={mlp_mult}, qkv={qkv_mult}',
+            }
+
     @time_it_async("3. Enhanced Analysis Agent")
+    def _get_ablation_strategy(self, target_ratio: float, is_cnn: bool, dataset: str) -> Dict:
+        """Fixed heuristic strategy used when ablate_analysis=True (no LLM call)."""
+        if is_cnn:
+            return {
+                'channel_pruning_ratio': target_ratio,
+                'importance_criterion': 'taylor',
+                'round_to': 2,
+                'rationale': 'Ablation: fixed heuristic (no LLM)',
+            }
+        else:
+            return {
+                'isomorphic_group_ratios': {
+                    'mlp_multiplier': target_ratio,
+                    'qkv_multiplier': target_ratio,
+                },
+                'importance_criterion': 'taylor',
+                'round_to': 8,
+                'rationale': 'Ablation: fixed heuristic (no LLM)',
+            }
+
     async def analyze(self, state: PruningState) -> Dict:
         """CLEANED: Enhanced analysis with LLM-based approach only (MACs-aware)"""
         
@@ -162,7 +219,13 @@ class AnalysisAgent:
         #         f"tol=+{macs_overshoot_tolerance_pct:.1f}%/-{macs_undershoot_tolerance_pct:.1f}%")
 
         
-        if is_cnn:
+        if state.get('ablate_grid_search'):
+            print("[🔬] Ablation: grid search mode — using predefined grid point")
+            llm_response = self._get_grid_search_strategy(state, is_cnn)
+        elif state.get('ablate_analysis'):
+            print("[🔬] Ablation: skipping Analysis Agent LLM call")
+            llm_response = self._get_ablation_strategy(target_ratio, is_cnn, dataset)
+        elif is_cnn:
             # print(f"[🔄] Using CNN LLM-based historical learning")
             llm_response = await self._execute_cnn_analysis_with_history(state, model_name)
         else:
@@ -170,12 +233,40 @@ class AnalysisAgent:
             # print(f"[🔄] Using ViT LLM-based historical learning")  # CHANGED!
             llm_response = await self._execute_vit_analysis_with_history(state, model_name)  # NEW!
         
-        if is_cnn and 'channel_pruning_ratio' in llm_response:
+        if is_cnn and 'channel_pruning_ratio' in llm_response and not state.get('ablate_grid_search'):
             channel_ratio = llm_response['channel_pruning_ratio']
             print(f"[🤖] LLM selected channel ratio: {channel_ratio:.4f}")
             if (baseline_macs is not None) and (target_macs is not None):
-                derived = max(0.0, min(1.0, 1 - (target_macs / baseline_macs)))
-                print(f"[🎯] Derived reduction (display): {derived:.3f} ({derived*100:.1f}%)")
+                history = state.get('history', [])
+                calibrated_ratio = None
+
+                # Empirical calibration: find the history entry with the lowest achieved MACs
+                # (best MAC reduction so far) and extrapolate linearly from it.
+                # This avoids the quadratic assumption which breaks for constrained architectures
+                # like ResNet50 where ratio→MACs is non-monotonic due to residual constraints.
+                best_r, best_macs = None, float('inf')
+                for entry in history:
+                    r = entry.get('strategy_used', {}).get('channel_pruning_ratio')
+                    a = entry.get('achieved_macs')
+                    if r is not None and a and 0 < a < best_macs:
+                        best_macs, best_r = a, r
+
+                if best_r is not None and best_macs < baseline_macs:
+                    achieved_reduction = (baseline_macs - best_macs) / baseline_macs
+                    target_reduction   = (baseline_macs - target_macs)  / baseline_macs
+                    if achieved_reduction > 0:
+                        calibrated_ratio = best_r * (target_reduction / achieved_reduction)
+                        print(f"[📐] Empirical calibration: best=({best_r:.4f}, {best_macs/1e9:.3f}G) "
+                              f"→ need {target_reduction*100:.1f}% reduction; corrected={calibrated_ratio:.4f}")
+
+                if calibrated_ratio is None:
+                    # First revision: analytical estimate assuming uniform channel pruning
+                    calibrated_ratio = 1.0 - (target_macs / baseline_macs) ** 0.5
+                    print(f"[📐] First-rev analytical calibration: {calibrated_ratio:.4f}")
+
+                calibrated_ratio = max(0.05, min(0.95, calibrated_ratio))
+                print(f"[🔧] LLM ratio {channel_ratio:.4f} → calibrated {calibrated_ratio:.4f}")
+                llm_response['channel_pruning_ratio'] = calibrated_ratio
         
         # Use LLM strategy directly
         validated_strategy = llm_response.copy()
@@ -315,11 +406,13 @@ class AnalysisAgent:
 
     async def _execute_cnn_analysis_with_history(self, state, model_name):
         """ENHANCED: Full utilization of CNNLearningAnalyzer capabilities"""
-        
+
         # Extract context
         dataset = state.get('dataset', 'cifar10')
         target_ratio = state.get('target_pruning_ratio')
-        history = state.get('history', [])
+        history = [] if state.get('ablate_history') else state.get('history', [])
+        if state.get('ablate_history') and state.get('history'):
+            print(f"[🔬] Ablation: hiding {len(state['history'])} history entries from Analysis Agent")
         current_revision = state.get('revision_number', 0)
 
         # Helper to normalize to GMacs
@@ -1389,7 +1482,9 @@ class AnalysisAgent:
             raise ValueError("No target_pruning_ratio provided and no MAC targets available to calculate ratio")
 
 
-        history = state.get('history', [])
+        history = [] if state.get('ablate_history') else state.get('history', [])
+        if state.get('ablate_history') and state.get('history'):
+            print(f"[🔬] Ablation: hiding {len(state['history'])} history entries from Analysis Agent")
         current_revision = state.get('revision_number', 0)
 
         # --- MACs-first context pulled from state (if available) ---

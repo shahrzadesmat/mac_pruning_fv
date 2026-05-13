@@ -488,7 +488,11 @@ CRITICAL JSON OUTPUT REQUIREMENTS:
 """
         
         final_prompt = prompt_text + json_instructions
-        
+
+        if state.get('ablate_master'):
+            print("[🔬] Ablation: skipping Master Agent LLM call")
+            return self._create_mac_fallback_response("ablation", dataset, state)
+
         try:
             # Call LLM with the MAC-aware Master Agent prompt
             messages = [

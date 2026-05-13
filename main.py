@@ -85,15 +85,52 @@ if __name__ == "__main__":
                     help='Use 10% of ImageNet for testing (no effect on CIFAR-10)')
     parser.add_argument('--imagenet_subset', type=float, default=1.0, 
                     help='Fraction of ImageNet to use (0.1 = 10%, no effect on CIFAR-10)')
-    parser.add_argument('--output_dir', type=str, default='/work/hdd/bdjd/models', 
+    parser.add_argument('--output_dir', type=str, default='/work/hdd/bfxa/dshah13/models',
                    help='Directory to save the final best model')
-    parser.add_argument('--checkpoint_dir', type=str, default='./checkpoints', 
+    parser.add_argument('--checkpoint_dir', type=str, default='./checkpoints',
                    help='Directory to save intermediate checkpoints')
+    parser.add_argument('--ablate_profiling', action='store_true',
+                    help='Ablation: skip Profiling Agent LLM call (keep MAC measurement)')
+    parser.add_argument('--ablate_master', action='store_true',
+                    help='Ablation: skip Master Agent LLM call (use fixed heuristic directives)')
+    parser.add_argument('--ablate_analysis', action='store_true',
+                    help='Ablation: skip Analysis Agent LLM call (use fixed ratio-based strategy)')
+    parser.add_argument('--ablate_history', action='store_true',
+                    help='Ablation: hide revision history from Analysis Agent (each revision decides independently)')
+    parser.add_argument('--ablate_grid_search', action='store_true',
+                    help='Ablation: replace Analysis Agent with a fixed predefined grid of pruning ratios (no LLM, no learning)')
+    parser.add_argument('--seed', type=int, default=42,
+                    help='Random seed for reproducibility (default: 42)')
+    parser.add_argument('--skip_inline_ft', action='store_true',
+                    help='Skip inline fine-tuning during search. Reduces search from ~24h to ~1-2h. '
+                         'Candidate selection falls back to closest MAC match. '
+                         'Run extended_finetune.py separately for paper-quality numbers.')
+    parser.add_argument('--importance_type_override', type=str, default=None,
+                    choices=['taylor', 'l1norm', 'l2norm', 'wanda', 'ddi', 'dc_cmi', 'dc_bcv'],
+                    help='Force a specific importance criterion for all revisions, bypassing LLM choice. '
+                         'Useful for ablation runs (e.g. --importance_type_override ddi).')
+    parser.add_argument('--ddi_lambda', type=float, default=0.5,
+                    help='λ for DDI/DC-CMI importance: score(c) = I_hard(c) - λ*I_easy(c). '
+                         'Only used when importance_type_override is ddi or dc_cmi, or when LLM picks them. '
+                         'Range 0.0–1.0 (default 0.5).')
+    parser.add_argument('--hard_easy_split_tau', type=float, default=0.5,
+                    help='τ for difficulty partition: top-τ fraction of samples by d(x)=1-p(y|x) are "hard". '
+                         'Default 0.5 → 50/50 split.')
 
     # Add WandB arguments
     parser = add_wandb_args(parser)
     
     args = parser.parse_args()
+
+    # Seed all random sources for reproducibility
+    import numpy as np
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    print(f"[🌱] Random seed set to {args.seed}")
 
     # Initialize WandB
     if args.wandb_name is None:
@@ -221,7 +258,18 @@ if __name__ == "__main__":
     initial_state_mods = {
         'max_revisions': args.max_revisions,
         'accuracy_threshold': args.accuracy_threshold,
-        **macs_config  # ✅ ADD: Include MACs configuration
+        **macs_config,
+        'ablate_profiling': args.ablate_profiling,
+        'ablate_master': args.ablate_master,
+        'ablate_analysis': args.ablate_analysis,
+        'ablate_history': args.ablate_history,
+        'ablate_grid_search': args.ablate_grid_search,
+        'skip_inline_ft': args.skip_inline_ft,
+        # DDI / DC-CMI
+        'importance_type_override': args.importance_type_override,
+        'ddi_lambda': args.ddi_lambda,
+        'hard_easy_split_tau': args.hard_easy_split_tau,
+        'seed': args.seed,
     }
 
     try:

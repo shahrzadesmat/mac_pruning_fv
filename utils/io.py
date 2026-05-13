@@ -135,7 +135,7 @@ async def save_final_best_model(state):
     # 3‑A: Load from the stored checkpoint with multiple key attempts
     if pruned_checkpoint and os.path.exists(pruned_checkpoint):
         try:
-            ckpt = torch.load(pruned_checkpoint, map_location='cpu')
+            ckpt = torch.load(pruned_checkpoint, map_location='cpu', weights_only=False)
             # print(f"[DEBUG] Checkpoint keys: {list(ckpt.keys())}")
             
             # Try different possible keys where the model might be stored

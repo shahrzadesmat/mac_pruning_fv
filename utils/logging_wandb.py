@@ -6,7 +6,7 @@ def add_wandb_args(parser):
                        help='WandB project name')
     parser.add_argument('--wandb_name', type=str, default=None, 
                        help='WandB run name (auto-generated if not provided)')
-    parser.add_argument('--wandb_mode', type=str, default='online', 
+    parser.add_argument('--wandb_mode', type=str, default='disabled',
                        choices=['online', 'offline', 'disabled'],
                        help='WandB mode: online, offline, or disabled')
     return parser

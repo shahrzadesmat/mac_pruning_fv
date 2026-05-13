@@ -58,3 +58,20 @@ class PruningState(TypedDict):
     num_classes: int  # 10 for CIFAR-10, 1000 for ImageNet
     input_size: int  # 32 for CIFAR-10, 224 for ImageNet
     data_path: str  # Path to dataset
+    skip_inline_ft: bool
+    ablate_profiling: bool
+    ablate_master: bool
+    ablate_analysis: bool
+    ablate_history: bool
+    ablate_grid_search: bool
+
+    # MAC ratio mode (when target_macs is not known at init time)
+    macs_target_ratio: float      # e.g. 0.5 → target = 0.5 × baseline_macs
+
+    # # DDI / DC-CMI fields
+    # ddi_lambda: float             # λ for DDI/DC-CMI scoring (LLM-searchable)
+    # hard_easy_split_tau: float    # τ for difficulty partition (default 0.5)
+    # hard_acc: float               # hard-subset top-1 from eval agent → history
+    # easy_acc: float               # easy-subset top-1 from eval agent → history
+    # importance_type_override: str # force "wanda"/"ddi"/"dc_cmi" from CLI (ablations)
+    seed: int                      # random seed — re-applied before each DDI scoring pass

@@ -1,10 +1,13 @@
 import os
 import re
 import copy
+import random
+import numpy as np
 from datetime import datetime
 from typing import Dict
 import torch
 from torch import nn
+from torch.utils.data import DataLoader, Subset
 import torch_pruning as tp
 import timm
 import pbench
@@ -62,7 +65,10 @@ class PruningAgent:
                 model = get_model(model_name_normalized, num_classes, pretrained=False)
                 # print(f"[🔧] Created ImageNet model: {model_name_normalized} without pretrained weights")
         else:
-            model = get_model(model_name_normalized, num_classes, pretrained=False)
+            try:
+                model = get_model(model_name_normalized, num_classes, pretrained=True)
+            except Exception:
+                model = get_model(model_name_normalized, num_classes, pretrained=False)
             # print(f"[🔧] Created {dataset} model: {model_name_normalized}")
         
         for param in model.parameters():
@@ -96,8 +102,10 @@ class PruningAgent:
             model.zero_grad()
             
             # print(f"[🧮] Calculating Taylor importance using gradient accumulation...")
+            dataset = getattr(self, '_current_state', {}).get('dataset', 'cifar10')
+            num_batches = 200 if dataset.lower() == 'imagenet' else 100
             for batch_idx, batch in enumerate(loader):
-                if batch_idx >= 100:  # Limit batches for efficiency
+                if batch_idx >= num_batches:
                     break
                 
                 # Handle different data formats (CIFAR-10 vs ImageNet arrow format)
@@ -521,7 +529,11 @@ class PruningAgent:
         
         # Extract importance criterion with FIXED logic
         current_revision = state.get('revision_number', 0)
-        if current_revision == 0 and dataset.lower() == 'imagenet':
+        _override = state.get('importance_type_override')
+        if _override:
+            importance_type = _override
+            print(f"[🔧] importance_type_override active: {importance_type}")
+        elif current_revision == 0 and dataset.lower() == 'imagenet':
             importance_type = "taylor"
             print(f"[🔧] FORCING taylor for revision 0 (ImageNet baseline)")
         else:
@@ -1213,7 +1225,13 @@ class PruningAgent:
         channel_pruning_ratio = strategy_dict.get('channel_pruning_ratio')
         suggested_round_to = strategy_dict.get('round_to', 8)
         importance_criterion = strategy_dict.get('importance_criterion', 'taylor')
-        
+
+        # Ablation override: CLI --importance_type_override takes precedence over LLM choice.
+        _imp_override = state.get('importance_type_override')
+        if _imp_override:
+            importance_criterion = _imp_override
+            print(f"[🔧] importance_type_override active: {importance_criterion}")
+
         # LEARNING-FIRST APPROACH: Use Analysis Agent or conservative fallback
         if channel_pruning_ratio is not None:
             print(f"[✅] Using Analysis Agent's learned channel ratio: {channel_pruning_ratio:.4f}")
@@ -1697,13 +1715,13 @@ class PruningAgent:
         with torch.no_grad():
             # fc1 importance: norm of each output channel
             fc1_importance = torch.norm(mlp_couple.fc1.weight, dim=1)
-            
-            # fc2 importance: norm of each input channel  
+
+            # fc2 importance: norm of each input channel
             fc2_importance = torch.norm(mlp_couple.fc2.weight, dim=0)
-            
+
             # Joint importance: channels that are important for BOTH layers
             joint_importance = fc1_importance * fc2_importance
-            
+
             return joint_importance
 
     def _update_mlp_couple(self, mlp_couple: MLPCouple, keep_indices: torch.Tensor):

@@ -4,6 +4,7 @@ import traceback
 import wandb
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
@@ -44,18 +45,18 @@ class FineTuningAgent:
 
         # Training transform with data augmentation
         train_transform = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
+            transforms.Resize((224, 224), antialias=True),
+            transforms.RandomCrop(224, padding=28),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean, std),
-            transforms.Resize((224, 224), antialias=True)
         ])
 
         # Validation/test transform without augmentation
         val_transform = transforms.Compose([
+            transforms.Resize((224, 224), antialias=True),
             transforms.ToTensor(),
             transforms.Normalize(mean, std),
-            transforms.Resize((224, 224), antialias=True)
         ])
 
         # Load training dataset
@@ -163,38 +164,39 @@ class FineTuningAgent:
                 model.classifier = nn.Linear(in_features, num_classes).to(device)
                 # print(f"[🔧] Fixed classifier: {in_features} -> {num_classes} classes")
 
-    def _get_dataset_specific_params(self, dataset: str, is_vit_model: bool):
+    def _get_dataset_specific_params(self, dataset: str, is_vit_model: bool, model_name: str = ''):
         """Get dataset and model-specific training parameters"""
         
+        is_convnext = 'convnext' in model_name.lower()
         if dataset.lower() == 'imagenet':
             if is_vit_model:
                 return {
-                    'num_epochs': 5,
+                    'num_epochs': 15,
                     'learning_rate': 0.0001,
                     'weight_decay': 0.01,
                     'optimizer': 'adamw',
-                    'batch_size_factor': 1.0  # Smaller batches for ImageNet
+                    'batch_size_factor': 1.0
                 }
             else:
                 return {
-                    'num_epochs': 5,
-                    'learning_rate': 0.01,
-                    'weight_decay': 5e-4,
-                    'optimizer': 'sgd',
+                    'num_epochs': 30,
+                    'learning_rate': 0.0001,
+                    'weight_decay': 0.05 if is_convnext else 1e-4,
+                    'optimizer': 'adamw',
                     'batch_size_factor': 1.0
                 }
         else:  # CIFAR-10
             if is_vit_model:
                 return {
-                    'num_epochs': 5,
-                    'learning_rate': 0.005,
-                    'weight_decay': 0.05,
+                    'num_epochs': 30,
+                    'learning_rate': 0.0005,
+                    'weight_decay': 0.01,
                     'optimizer': 'adamw',
                     'batch_size_factor': 1.0
                 }
             else:
                 return {
-                    'num_epochs': 5,
+                    'num_epochs': 15,
                     'learning_rate': 0.01,
                     'weight_decay': 5e-4,
                     'optimizer': 'sgd',
@@ -284,6 +286,19 @@ class FineTuningAgent:
             # FIX: Check if ViT AFTER getting model
             is_vit_model = any(isinstance(m, timm.models.vision_transformer.Attention) for m in model.modules())
             print(f"[🔍] Model type: {'ViT' if is_vit_model else 'CNN'}")
+
+            # Load teacher model for KL distillation
+            teacher = None
+            try:
+                teacher = timm.create_model(model_name, pretrained=True)
+                self._fix_classification_head(teacher, num_classes, device)
+                teacher = teacher.to(device)
+                teacher.eval()
+                for p in teacher.parameters():
+                    p.requires_grad_(False)
+                print(f"[🎓] Teacher loaded: {model_name} ({num_classes} classes)")
+            except Exception as e:
+                print(f"[⚠️] Could not load teacher, falling back to CE only: {e}")
             
             # Get pruning metrics
             pruning_results = state.get('prune', {}).get('pruning_results', {})
@@ -299,54 +314,70 @@ class FineTuningAgent:
                 zero_shot = last_entry.get('zero_shot_accuracy', 0)
             
             # Get user-specified number of epochs
-            params = self._get_dataset_specific_params(dataset, is_vit_model)
+            params = self._get_dataset_specific_params(dataset, is_vit_model, model_name)
             num_epochs = params['num_epochs']  # Respect user setting (you set this to 1)
             
-            # SIMPLE FIX: Use very conservative LR for pruned models
-            if dataset.lower() == 'imagenet' and is_vit_model:
-                if achieved_ratio > 0.15:  # Heavily pruned
-                    base_lr = 0.00005      # Very conservative
-                else:
-                    base_lr = 0.0001       # Still conservative
-            else:  # CIFAR-10 or CNN
-                base_lr = 0.001 if achieved_ratio < 0.1 else 0.0005
-            
+            # Use dataset-specific learning rate from params
+            base_lr = params['learning_rate']
+            weight_decay = params['weight_decay']
+
             print(f"[🔧] Using LR {base_lr} for {achieved_ratio:.1%} pruned model")
-            # print(f"[⚙️] User set epochs: {num_epochs}")
-            
-            # FIX: Setup data loaders EARLY
-            train_loader, val_loader = self._setup_dataset_loaders(dataset, data_path, 64)
-            # print(f"[📊] Setup data loaders: {len(train_loader)} train, {len(val_loader)} val")
-            
+
+            # Setup data loaders
+            batch_size = 128 if is_vit_model else 64
+            train_loader, val_loader = self._setup_dataset_loaders(dataset, data_path, batch_size)
+
             # Setup optimizer
-            if is_vit_model:
+            use_adamw = is_vit_model or (dataset.lower() == 'imagenet')
+            if use_adamw:
                 optimizer = torch.optim.AdamW(
                     model.parameters(),
                     lr=base_lr,
-                    weight_decay=0.02,
+                    weight_decay=weight_decay,
                     betas=(0.9, 0.999)
                 )
-                print(f"[🧮] Using AdamW optimizer for ViT")
+                print(f"[🧮] Using AdamW optimizer ({'ViT' if is_vit_model else 'CNN/ImageNet'})")
             else:
                 optimizer = torch.optim.SGD(
                     model.parameters(),
                     lr=base_lr,
                     momentum=0.9,
-                    weight_decay=1e-4
+                    weight_decay=weight_decay
                 )
                 print(f"[🧮] Using SGD optimizer for CNN")
-            
-            # SIMPLE SCHEDULER: Just constant LR (no fancy scheduling)
-            scheduler = torch.optim.lr_scheduler.ConstantLR(optimizer, factor=1.0)
-            
-            # Loss with light label smoothing
-            criterion = nn.CrossEntropyLoss(label_smoothing=0.05).to(device)
-            
-            # Track best model
-            best_val_acc = 0.0
+
+            # Cosine annealing with linear warmup
+            if dataset.lower() == 'imagenet':
+                warmup_epochs = min(5, num_epochs // 6) if num_epochs > 5 else 0
+            else:
+                warmup_epochs = min(3, num_epochs // 10) if num_epochs > 3 else 0
+            if warmup_epochs > 0:
+                warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
+                    optimizer, start_factor=0.1, total_iters=warmup_epochs
+                )
+                cosine_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                    optimizer, T_max=num_epochs - warmup_epochs, eta_min=base_lr * 0.01
+                )
+                scheduler = torch.optim.lr_scheduler.SequentialLR(
+                    optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[warmup_epochs]
+                )
+            else:
+                scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                    optimizer, T_max=num_epochs, eta_min=base_lr * 0.01
+                )
+
+            # Loss with dataset-appropriate label smoothing
+            label_smoothing = 0.1 if dataset.lower() == 'imagenet' else 0.05
+            criterion = nn.CrossEntropyLoss(label_smoothing=label_smoothing).to(device)
+            scaler = torch.cuda.amp.GradScaler()
+
+            # Track best model — must beat zero-shot to count as improvement
+            best_val_acc = zero_shot
             best_model_state = None
-            
-            print(f"[🎯] Simple fine-tuning: {num_epochs} epochs, LR {base_lr}")
+            patience = 5
+            patience_counter = 0
+
+            print(f"[🎯] Fine-tuning: {num_epochs} epochs, LR {base_lr}, warmup {warmup_epochs} epochs")
             
             # Training loop
             for epoch in range(num_epochs):
@@ -369,13 +400,27 @@ class FineTuningAgent:
                     
                     # Forward pass
                     optimizer.zero_grad()
-                    outputs = model(inputs)
-                    loss = criterion(outputs, targets)
-                    
+                    with torch.cuda.amp.autocast():
+                        outputs = model(inputs)
+                        if teacher is not None:
+                            with torch.no_grad():
+                                teacher_logits = teacher(inputs)
+                            T, alpha = 4.0, 0.3
+                            loss_kd = F.kl_div(
+                                F.log_softmax(outputs / T, dim=1),
+                                F.softmax(teacher_logits / T, dim=1),
+                                reduction='batchmean'
+                            ) * (T * T)
+                            loss = alpha * loss_kd + (1.0 - alpha) * criterion(outputs, targets)
+                        else:
+                            loss = criterion(outputs, targets)
+
                     # Backward pass with gradient clipping
-                    loss.backward()
+                    scaler.scale(loss).backward()
+                    scaler.unscale_(optimizer)
                     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-                    optimizer.step()
+                    scaler.step(optimizer)
+                    scaler.update()
                     
                     # Track metrics
                     train_loss += loss.item()
@@ -397,17 +442,21 @@ class FineTuningAgent:
                     val_loss, val_acc, _ = val_result
                     print(f'[📊] Validation: Accuracy {val_acc:.2f}%')
                 
+                # Step the LR scheduler
+                scheduler.step()
+
                 # Save best model
                 if val_acc > best_val_acc:
                     best_val_acc = val_acc
                     best_model_state = copy.deepcopy(model.state_dict())
+                    patience_counter = 0
                     print(f'[✅] New best: {best_val_acc:.2f}%')
                 else:
-                    print(f'[📉] No improvement (best: {best_val_acc:.2f}%)')
-                
-                # EARLY STOPPING: Only if more than 1 epoch and accuracy degrades significantly
-                if num_epochs > 1 and epoch > 0 and val_acc < (best_val_acc - 2.0):  # 2% degradation tolerance
-                    print(f"[🛑] Early stopping - validation degrading")
+                    patience_counter += 1
+                    print(f'[📉] No improvement for {patience_counter}/{patience} epochs (best: {best_val_acc:.2f}%)')
+
+                if patience_counter >= patience:
+                    print(f"[🛑] Early stopping - no improvement for {patience} epochs")
                     break
             
             # Load best model
